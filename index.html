@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>GYMLOG PRO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#161616;--bg4:#1c1c1c;--bg5:#222;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --text:rgba(255,255,255,.9);--text2:rgba(255,255,255,.55);--text3:rgba(255,255,255,.3);
+  --accent:#ff5500;--accent2:#ff9500;--accent3:#ff3300;
+  --green:#3dcc64;--blue:#4da6ff;--red:#ff4444;
+  --r:14px;--r2:10px;--r3:20px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Barlow Condensed',sans-serif}
+#app{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative}
+
+/* ═══ HEADER ═══ */
+.hdr{
+  background:linear-gradient(135deg,#111 0%,#181818 100%);
+  border-bottom:1px solid rgba(255,85,0,.2);
+  padding:12px 14px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;position:relative;z-index:10;
+}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,85,0,.5),transparent)}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.logo-sub{font-size:9px;color:var(--text3);letter-spacing:3px;text-transform:uppercase;margin-top:1px}
+.hdr-right{display:flex;gap:6px;align-items:center}
+.hdr-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.hdr-btn:active{transform:scale(.88);background:rgba(255,255,255,.1)}
+.hdr-btn.accent{border-color:rgba(255,85,0,.4);background:rgba(255,85,0,.12);color:#ff7733;font-size:22px;font-weight:900}
+
+/* ═══ TABS ═══ */
+.tabs{display:flex;background:#0d0d0d;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 10px 9px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text3);cursor:pointer;text-align:center;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab.on{color:var(--accent);border-color:var(--accent)}
+.tab-icon{font-size:14px;display:block;margin-bottom:2px}
+
+/* ═══ BODY ═══ */
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:rgba(255,85,0,.3) transparent}
+.body::-webkit-scrollbar{width:3px}
+.body::-webkit-scrollbar-thumb{background:rgba(255,85,0,.3);border-radius:2px}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:clip}
+.card-head{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.card-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+
+/* ═══ DAYS ROW ═══ */
+.days-row{display:flex;gap:6px;overflow-x:auto;padding:10px 14px 8px;scrollbar-width:none}
+.days-row::-webkit-scrollbar{display:none}
+.day-pill{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
+  padding:8px 10px;border-radius:12px;min-width:50px;border:1.5px solid var(--border);
+  background:rgba(255,255,255,.02);transition:all .2s}
+.day-pill:active{transform:scale(.93)}
+.day-pill.on{border-color:rgba(255,85,0,.6);background:rgba(255,85,0,.1)}
+.day-pill.hoje{border-color:rgba(255,180,0,.4)}
+.day-nome{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--text3)}
+.day-num{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text2);line-height:1}
+.day-pill.on .day-nome,.day-pill.on .day-num{color:#ff7733}
+.day-pill.hoje .day-num{color:#ffcc00}
+.day-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,85,0,.5)}
+
+/* ═══ EXERCÍCIO CARD ═══ */
+.ex{background:var(--bg4);border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);margin-bottom:8px;transition:border-color .2s}
+.ex.ok{border-color:rgba(61,204,100,.3);background:rgba(61,204,100,.03)}
+.ex.open{border-color:rgba(255,85,0,.3)}
+.ex-head{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+.ex-thumb{width:50px;height:50px;border-radius:9px;flex-shrink:0;border:2px solid var(--border2);
+  background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
+.ex-thumb img{width:100%;height:100%;object-fit:cover}
+.ex-info{flex:1;min-width:0}
+.ex-nome{font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.ex-right{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ex-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);background:transparent;
+  display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .2s;flex-shrink:0}
+.ex-check.done{background:var(--green);border-color:var(--green);color:white}
+.ex-btns-mini{display:flex;gap:3px;margin-top:3px}
+.ex-btn-tiny{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;opacity:.35;transition:opacity .15s}
+.ex-btn-tiny:hover{opacity:.7}
+.ex-chevron{font-size:9px;color:var(--text3);width:18px;height:18px;border-radius:50%;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:2px}
+.ex-chevron.open{color:var(--accent);border-color:rgba(255,85,0,.4);background:rgba(255,85,0,.08)}
+
+/* Mini séries */
+.mini-series{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 10px}
+.ms{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;
+  background:var(--bg5);border:1.5px solid var(--border);cursor:pointer;transition:all .12s;user-select:none}
+.ms:active{transform:scale(.94)}
+.ms.done{background:rgba(255,85,0,.15);border-color:rgba(255,85,0,.4)}
+.ms-n{font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--text3);min-width:12px;text-align:center}
+.ms.done .ms-n{color:var(--accent)}
+.ms-r{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text2)}
+.ms.done .ms-r{color:#ff9955}
+
+/* Corpo expandido */
+.ex-body{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;
+  border-top:1px solid var(--border);padding-top:10px;animation:bodyIn .22s ease}
+@keyframes bodyIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+
+/* Séries expandidas */
+.series-grid{display:flex;gap:6px;flex-wrap:wrap}
+.serie{min-width:68px;flex:1;background:var(--bg5);border-radius:9px;padding:8px;
+  border:1.5px solid var(--border);display:flex;flex-direction:column;align-items:center;
+  gap:1px;cursor:pointer;transition:all .15s;user-select:none}
+.serie:active{transform:scale(.95)}
+.serie.done{background:rgba(255,85,0,.18);border-color:rgba(255,85,0,.5)}
+.serie-num{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text)}
+.serie-meta{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;text-align:center}
+.serie.done .serie-num{color:#ff7733}
+.serie.done .serie-meta{color:rgba(255,150,80,.7)}
+
+/* GIF expand */
+.gif-expand{width:100%;border-radius:10px;overflow:hidden;background:#0d0d0d;border:1px solid var(--border);text-align:center}
+.gif-expand img{width:100%;max-height:250px;object-fit:contain;display:block}
+.gif-lbl{font-size:10px;color:var(--text3);padding:5px;text-transform:uppercase;letter-spacing:1px}
+
+/* Audio */
+.audio-player{background:#1a1a1a;border-radius:9px;padding:8px 10px;display:flex;align-items:center;gap:8px;border:1px solid var(--border)}
+.audio-player audio{flex:1;height:30px}
+
+/* Obs */
+.obs-block{font-size:13px; overflow: scroll; color:var(--text2);line-height:1.6;border-left:3px solid rgba(255,85,0,.4);
+  padding:4px 10px;background:rgba(255,85,0,.04);border-radius:0 8px 8px 0}
+
+/* Timer btns */
+.timer-row-mini{display:flex;gap:6px;margin-top:2px}
+
+/* ═══ PROGRESS ═══ */
+.prog-wrap{padding:6px 14px 10px}
+.prog-hdr{display:flex;justify-content:space-between;margin-bottom:5px}
+.prog-bar{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .4s ease}
+
+/* ═══ TIMER ═══ */
+.timer-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px}
+.timer-ring{position:relative;width:180px;height:180px}
+.timer-ring svg{width:180px;height:180px}
+.t-bg{fill:none;stroke:rgba(255,255,255,.07);stroke-width:8}
+.t-fg{fill:none;stroke-width:8;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .5s linear,stroke .4s}
+.timer-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.timer-txt{font-family:'Bebas Neue',sans-serif;font-size:50px;color:var(--text);line-height:1}
+.timer-lbl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:var(--text3)}
+.timer-btns{display:flex;gap:10px}
+.t-btn{width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;font-size:20px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s}
+.t-btn:active{transform:scale(.9)}
+.t-btn.play{background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 20px rgba(255,85,0,.4);color:white}
+.t-btn.stop{background:rgba(255,255,255,.08);border:1px solid var(--border2);color:var(--text2)}
+.presets{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.preset{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:800;cursor:pointer;
+  background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text3);transition:all .15s}
+.preset:active{transform:scale(.93)}
+.preset.on{background:rgba(255,85,0,.2);border-color:rgba(255,85,0,.5);color:#ff7733}
+
+/* ═══ ALARM OVERLAY ═══ */
+.alarm{position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  animation:alarmIn .4s ease}
+@keyframes alarmIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.alarm-bell{font-size:80px;animation:bell .5s ease infinite alternate}
+@keyframes bell{from{transform:rotate(-15deg) scale(1)}to{transform:rotate(15deg) scale(1.1)}}
+.alarm-title{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:5px;color:white;text-align:center}
+.alarm-sub{font-size:16px;color:rgba(255,255,255,.5)}
+.alarm-btn{padding:14px 40px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;cursor:pointer;
+  box-shadow:0 6px 28px rgba(255,85,0,.5)}
+
+/* ═══ MODAL ═══ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);z-index:200;
+  display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#181818;border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;
+  padding:20px 16px 30px;width:100%;max-width:480px;box-shadow:0 -20px 60px rgba(0,0,0,.7);
+  max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;gap:11px;
+  animation:slideUp .3s cubic-bezier(.4,0,.2,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 2px}
+.modal h2{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:2px;color:white;margin:0}
+.modal-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ═══ FORMS ═══ */
+.field{display:flex;flex-direction:column;gap:4px}
+.lbl{font-size:10px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.inp,.sel,.textarea{width:100%;background:#1a1a1a;color:var(--text);border:1px solid var(--border2);
+  border-radius:9px;padding:10px 12px;font-size:14px;font-family:'Barlow Condensed',sans-serif;font-weight:600;outline:none}
+.inp:focus,.sel:focus,.textarea:focus{border-color:rgba(255,85,0,.5)}
+.sel option{background:#1a1a1a}
+.textarea{resize:none;line-height:1.5}
+.row{display:flex;gap:8px}
+.row .field{flex:1}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:12px;border-radius:11px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;width:100%}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.25;cursor:default;transform:none}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;box-shadow:0 4px 16px rgba(255,85,0,.3)}
+.btn.secondary{background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--text2)}
+.btn.danger{background:rgba(220,40,40,.12);border:1px solid rgba(220,40,40,.25);color:#ff6060}
+.btn.green{background:linear-gradient(135deg,#00cc55,#008833);color:white}
+.btn.blue{background:rgba(77,166,255,.1);border:1px solid rgba(77,166,255,.25);color:var(--blue)}
+.btn.sm{padding:8px 12px;font-size:12px;width:auto;flex:1}
+
+/* ═══ MIDI THUMBS ═══ */
+.media-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.media-thumb{height:78px;border-radius:10px;border:1px dashed rgba(255,255,255,.12);background:#111;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  flex-direction:column;gap:3px;transition:border-color .15s}
+.media-thumb:active{background:rgba(255,255,255,.05)}
+.media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover;border-radius:9px}
+.media-thumb audio{width:100%;height:28px}
+.media-thumb-icon{font-size:24px;opacity:.35}
+.media-thumb-lbl{font-size:9px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:.5px}
+.media-btns-row{display:flex;gap:6px;flex-wrap:wrap}
+.media-btn{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:9px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:pointer;
+  font-size:12px;font-weight:700;color:var(--text3);transition:background .15s;flex:1}
+.media-btn:active{background:rgba(255,255,255,.08)}
+
+/* ═══ SERIES EDITOR ═══ */
+.serie-edit-row{display:flex;gap:6px;align-items:center}
+.serie-edit-n{font-size:11px;color:var(--text3);min-width:16px;font-family:monospace}
+.serie-edit-del{background:none;border:none;color:rgba(255,80,80,.45);font-size:18px;cursor:pointer;padding:2px}
+
+/* ═══ BIBLIOTECA ═══ */
+.bib-search{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border)}
+.bib-search .inp{flex:1;padding:8px 10px;font-size:13px}
+.chips{display:flex;gap:5px;overflow-x:auto;padding:7px 12px;border-bottom:1px solid var(--border);scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex-shrink:0;padding:4px 11px;border-radius:20px;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.5px;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid var(--border2);color:var(--text3);transition:all .15s}
+.chip:active{transform:scale(.93)}
+.chip.on{background:rgba(255,85,0,.18);border-color:rgba(255,85,0,.4);color:#ff7733}
+.bib-card{display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.bib-card:active{background:rgba(255,255,255,.04)}
+.bib-card:last-child{border-bottom:none}
+.bib-thumb{width:54px;height:54px;border-radius:9px;flex-shrink:0;background:#222;border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden}
+.bib-thumb img{width:100%;height:100%;object-fit:cover}
+.bib-info{flex:1;min-width:0}
+.bib-nome{font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bib-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.bib-actions{display:flex;flex-direction:column;gap:4px;align-items:center;flex-shrink:0}
+.bib-add{padding:5px 11px;border-radius:20px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:white;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;cursor:pointer}
+.bib-add:active{transform:scale(.93)}
+
+/* ═══ HISTÓRICO ═══ */
+.hist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.hist-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* ═══ BADGE ═══ */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:800;letter-spacing:.5px}
+.badge.g{background:rgba(61,204,100,.12);color:var(--green);border:1px solid rgba(61,204,100,.25)}
+.badge.o{background:rgba(255,85,0,.12);color:#ff7733;border:1px solid rgba(255,85,0,.25)}
+.badge.z{background:rgba(255,255,255,.06);color:var(--text3);border:1px solid var(--border2)}
+
+/* ═══ SEMANA GRID ═══ */
+.week-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dia-card{background:var(--bg4);border:1.5px solid var(--border);border-radius:var(--r2);padding:12px;cursor:pointer;transition:all .15s}
+.dia-card:active{transform:scale(.97)}
+.dia-card.on{border-color:rgba(255,85,0,.5);background:rgba(255,85,0,.07)}
+.dia-nome{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);letter-spacing:1px}
+.dia-qtd{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+/* ═══ STATS GRID ═══ */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat-box{background:var(--bg4);border-radius:var(--r2);padding:12px 8px;text-align:center;border:1px solid var(--border)}
+.stat-icon{font-size:18px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:28px;color:#ff7733;line-height:1.1}
+.stat-lbl{font-size:9px;color:var(--text3);font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+
+/* ═══ EMPTY ═══ */
+.empty{text-align:center;padding:40px 16px;color:var(--text3)}
+.empty-icon{font-size:48px;opacity:.2;margin-bottom:10px}
+.empty-txt{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.empty-hint{font-size:12px;margin-top:6px;opacity:.7}
+
+/* ═══ DETAIL ROW ═══ */
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-row .k{font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.detail-row .v{font-size:13px;font-weight:700;color:var(--text)}
+
+/* ═══ MUSIC PLAYER ═══ */
+.music-wrap{background:var(--bg4);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.music-track{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border)}
+.music-track:last-child{border-bottom:none}
+.music-track:active{background:rgba(255,255,255,.05)}
+.music-track.playing{background:rgba(255,85,0,.08)}
+.music-art{width:44px;height:44px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+.music-info{flex:1;min-width:0}
+.music-name{font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.music-play-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:rgba(255,255,255,.05);
+  color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.music-play-btn.on{background:rgba(255,85,0,.2);border-color:rgba(255,85,0,.4);color:var(--accent)}
+.now-playing{background:rgba(255,85,0,.08);border:1px solid rgba(255,85,0,.2);border-radius:var(--r);padding:12px;margin-bottom:4px}
+.now-play-hdr{display:flex;align-items:center;gap:10px}
+.now-play-art{width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(255,85,0,.15);flex-shrink:0}
+.now-play-controls{display:flex;align-items:center;gap:8px;margin-top:10px}
+.now-play-controls .main-btn{width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.now-play-controls .side-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:rgba(255,255,255,.05);color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.prog-audio{width:100%;margin-top:8px;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:rgba(255,255,255,.1);outline:none;cursor:pointer}
+.prog-audio::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+.vol-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.vol-row span{font-size:14px}
+.vol-slider{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:rgba(255,255,255,.1);outline:none}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent2);cursor:pointer}
+
+/* ═══ EXPORT INFO ═══ */
+.info-block{font-size:13px;color:var(--text2);line-height:1.8;background:rgba(255,255,255,.03);border-radius:9px;padding:10px 12px;border:1px solid var(--border)}
+.info-block b{color:#ff7733}
+
+/* ═══ MIDIA BADGE ═══ */
+.midia-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.5px;
+  color:rgba(255,150,50,.8);background:rgba(255,85,0,.07);border:1px solid rgba(255,85,0,.18);border-radius:5px;padding:2px 5px}
+
+/* ═══ MISC ═══ */
+.sep{height:1px;background:var(--border);margin:4px 0}
+.tag-row{display:flex;gap:5px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <div class="logo">💪 GYM LOG</div>
+      <div class="logo-sub">Professional Tracker</div>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn accent" onclick="abrirModalEx(null)" title="Novo Exercício">+</button>
+      <button class="hdr-btn" onclick="toggleMusic()" title="Música" id="btnMusic">🎵</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabsBar">
+    <div class="tab on" onclick="setTab('hoje')"><span class="tab-icon">🏋️</span>Hoje</div>
+    <div class="tab" onclick="setTab('plano')"><span class="tab-icon">📅</span>Plano</div>
+    <div class="tab" onclick="setTab('biblioteca')"><span class="tab-icon">📚</span>Biblioteca</div>
+    <div class="tab" onclick="setTab('musica')"><span class="tab-icon">🎵</span>Música</div>
+    <div class="tab" onclick="setTab('timer')"><span class="tab-icon">⏱️</span>Timer</div>
+    <div class="tab" onclick="setTab('historico')"><span class="tab-icon">📊</span>Histórico</div>
+    <div class="tab" onclick="setTab('export')"><span class="tab-icon">📤</span>Export</div>
+  </div>
+
+  <div class="body" id="mainBody"></div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="fi_foto" accept="image/*" style="display:none">
+<input type="file" id="fi_cam" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fi_gif" accept="image/gif,image/*" style="display:none">
+<input type="file" id="fi_audio" accept="audio/*" style="display:none">
+<input type="file" id="fi_musica" accept="audio/*" multiple style="display:none">
+<input type="file" id="fi_import" accept=".json,application/json" style="display:none">
+<input type="file" id="fi_bib_foto" accept="image/*" capture="environment" style="display:none">
+<input type="file" id="fi_bib_gif" accept="image/gif,image/*" style="display:none">
+<input type="file" id="fi_bib_audio" accept="audio/*" style="display:none">
+
+<script>
+// ══════════════════════════════════════
+// INDEXEDDB
+// ══════════════════════════════════════
+let _DB = null;
+async function openDB(){
+  if(_DB) return _DB;
+  return new Promise((ok,fail)=>{
+    const r = indexedDB.open('GymLogPro_v1',3);
+    r.onupgradeneeded = e=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('exercicios')){
+        const s = db.createObjectStore('exercicios',{keyPath:'id',autoIncrement:true});
+        s.createIndex('dia','dia',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('sessoes')) db.createObjectStore('sessoes',{keyPath:'id',autoIncrement:true});
+      if(!db.objectStoreNames.contains('config'))  db.createObjectStore('config',{keyPath:'chave'});
+      if(!db.objectStoreNames.contains('biblioteca')){
+        const b = db.createObjectStore('biblioteca',{keyPath:'id',autoIncrement:true});
+        b.createIndex('grupo','grupMuscular',{unique:false});
+      }
+      if(!db.objectStoreNames.contains('musicas')) db.createObjectStore('musicas',{keyPath:'id',autoIncrement:true});
+    };
+    r.onsuccess = e=>{ _DB=e.target.result; ok(_DB); };
+    r.onerror = fail;
+  });
+}
+async function dbGet(s,k){const db=await openDB();return new Promise(ok=>{try{const r=db.transaction(s,'readonly').objectStore(s).get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null);}catch(e){ok(null);}})}
+async function dbAll(s){const db=await openDB();return new Promise(ok=>{try{const r=db.transaction(s,'readonly').objectStore(s).getAll();r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([]);}catch(e){ok([]);}});}
+async function dbIdx(s,idx,v){const db=await openDB();return new Promise(ok=>{try{const r=db.transaction(s,'readonly').objectStore(s).index(idx).getAll(v);r.onsuccess=()=>ok(r.result||[]);r.onerror=()=>ok([]);}catch(e){ok([]);}})}
+async function dbPut(s,o){const db=await openDB();return new Promise((ok,fail)=>{try{const r=db.transaction(s,'readwrite').objectStore(s).put(o);r.onsuccess=()=>ok(r.result);r.onerror=fail;}catch(e){fail(e);}})}
+async function dbAdd(s,o){const db=await openDB();return new Promise((ok,fail)=>{try{const r=db.transaction(s,'readwrite').objectStore(s).add(o);r.onsuccess=()=>ok(r.result);r.onerror=fail;}catch(e){fail(e);}})}
+async function dbDel(s,k){const db=await openDB();return new Promise(ok=>{try{const r=db.transaction(s,'readwrite').objectStore(s).delete(k);r.onsuccess=()=>ok();r.onerror=()=>ok();}catch(e){ok();}})}
+
+// ══════════════════════════════════════
+// ESTADO
+// ══════════════════════════════════════
+const DIAS=[{id:'seg',nome:'Seg',full:'Segunda-feira'},{id:'ter',nome:'Ter',full:'Terça-feira'},
+  {id:'qua',nome:'Qua',full:'Quarta-feira'},{id:'qui',nome:'Qui',full:'Quinta-feira'},
+  {id:'sex',nome:'Sex',full:'Sexta-feira'},{id:'sab',nome:'Sáb',full:'Sábado'},{id:'dom',nome:'Dom',full:'Domingo'}];
+
+function diaHoje(){return['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()]}
+function fmtTimer(s){const m=Math.floor(s/60),ss=s%60;return`${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}
+function fmtData(ts){return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+
+let S = {
+  tab:'hoje', diaAtivo: diaHoje(),
+  timerSeg:60, timerRest:60, timerOn:false, timerInterval:null, timerEnd:null,
+  notifPedida:false,
+  fotoT:null, gifT:null, audioT:null,
+  bibFotoT:null, bibGifT:null, bibAudioT:null,
+  bibFiltro:'todos', bibBusca:'',
+  expandido: new Set(),
+  // musica
+  musicaAtual:null, musicaObj:null, musicaPlaying:false, musicaList:[],
+  musicaAudio: null,
+};
+
+// ══════════════════════════════════════
+// AUDIO/TIMER
+// ══════════════════════════════════════
+function beep(){
+  try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(.15,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.12);o.start();o.stop(c.currentTime+.13);}catch(e){}
+}
+function alarme(){
+  try{const c=new(window.AudioContext||window.webkitAudioContext)();const t=c.currentTime;[880,1100,880,1100,660,880,1320].forEach((f,i)=>{const o=c.createOscillator();const g=c.createGain();o.connect(g);g.connect(c.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.3,t+i*.18);g.gain.exponentialRampToValueAtTime(.001,t+i*.18+.15);o.start(t+i*.18);o.stop(t+i*.18+.16);});}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([300,100,300,100,500]);}catch(e){}
+  if('Notification' in window && Notification.permission==='granted'){
+    try{new Notification('💪 GYM LOG — Descanso Concluído!',{body:'Hora de voltar! 🔥',requireInteraction:true,tag:'gymlog-alarm'});}catch(e){}
+  }
+}
+function pedirNotif(){
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission().then(()=>{S.notifPedida=true;});
+  }
+}
+function stopTimer(){if(S.timerInterval){clearInterval(S.timerInterval);S.timerInterval=null;}S.timerOn=false;S.timerEnd=null;}
+function startTimer(seg){
+  stopTimer();
+  if(seg!==undefined){S.timerSeg=seg;S.timerRest=seg;}
+  S.timerEnd=Date.now()+S.timerRest*1000;
+  S.timerOn=true;
+  S.timerInterval=setInterval(tickTimer,250);
+  updTimerUI();
+}
+function tickTimer(){
+  if(!S.timerOn) return;
+  const ms=S.timerEnd-Date.now();
+  const s=Math.max(0,Math.ceil(ms/1000));
+  if(s!==S.timerRest){S.timerRest=s;if(s<=3&&s>0)beep();updTimerUI();}
+  if(ms<=0){stopTimer();S.timerRest=0;updTimerUI();showAlarm();}
+}
+function pauseTimer(){if(S.timerOn)stopTimer();else startTimer();updTimerUI();}
+function resetTimer(){stopTimer();S.timerRest=S.timerSeg;updTimerUI();}
+function updTimerUI(){
+  const txt=document.getElementById('timerTxt');
+  const fg=document.getElementById('timerFg');
+  const btn=document.getElementById('timerPlayBtn');
+  const lbl=document.getElementById('timerLbl');
+  if(!txt) return;
+  txt.textContent=fmtTimer(S.timerRest);
+  const circ=2*Math.PI*78;
+  const pct=S.timerRest/(S.timerSeg||60);
+  if(fg){fg.style.strokeDasharray=circ;fg.style.strokeDashoffset=circ-pct*circ;fg.style.stroke=pct>.5?'#ff5500':pct>.2?'#ff9500':'#ff3030';}
+  if(btn) btn.textContent=S.timerOn?'⏸':'▶';
+  if(lbl) lbl.textContent=S.timerOn?'DESCANSANDO':(S.timerRest<S.timerSeg&&S.timerRest>0?'PAUSADO':'PRONTO');
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.timerOn)tickTimer();});
+function showAlarm(){
+  alarme();
+  document.querySelectorAll('.alarm').forEach(e=>e.remove());
+  const el=document.createElement('div');
+  el.className='alarm';
+  el.innerHTML=`<div class="alarm-bell">⏰</div>
+    <div class="alarm-title">DESCANSO<br>CONCLUÍDO!</div>
+    <div class="alarm-sub">Hora de voltar à ação 💪</div>
+    <button class="alarm-btn" onclick="this.closest('.alarm').remove();resetTimer()">BORA! 🔥</button>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{if(el.parentNode)el.remove();},40000);
+}
+
+// ══════════════════════════════════════
+// IMAGEM / ARQUIVO
+// ══════════════════════════════════════
+function compImg(dataURL,maxW=800){
+  return new Promise(ok=>{
+    const img=new Image();
+    img.onload=()=>{let w=img.width,h=img.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);ok(c.toDataURL('image/jpeg',.82));};
+    img.src=dataURL;
+  });
+}
+function lerArq(file){return new Promise(ok=>{const r=new FileReader();r.onload=e=>ok(e.target.result);r.readAsDataURL(file);});}
+
+// ══════════════════════════════════════
+// FILE INPUT HANDLERS
+// ══════════════════════════════════════
+document.getElementById('fi_foto').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);
+  const c=await compImg(raw);S.fotoT=c;
+  const el=document.getElementById('thumb_foto');
+  if(el) el.innerHTML=`<img src="${c}">`;
+  e.target.value='';
+};
+document.getElementById('fi_cam').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);
+  const c=await compImg(raw);S.fotoT=c;
+  const el=document.getElementById('thumb_foto');
+  if(el) el.innerHTML=`<img src="${c}">`;
+  e.target.value='';
+};
+document.getElementById('fi_gif').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);S.gifT=raw;
+  const el=document.getElementById('thumb_gif');
+  if(el) el.innerHTML=`<img src="${raw}">`;
+  e.target.value='';
+};
+document.getElementById('fi_audio').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);S.audioT=raw;
+  const el=document.getElementById('thumb_audio');
+  if(el) el.innerHTML=`<audio controls src="${raw}" style="width:100%;height:28px"></audio>`;
+  e.target.value='';
+};
+document.getElementById('fi_bib_foto').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);const c=await compImg(raw);S.bibFotoT=c;
+  const el=document.getElementById('bib_thumb_foto');if(el) el.innerHTML=`<img src="${c}">`;e.target.value='';
+};
+document.getElementById('fi_bib_gif').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);S.bibGifT=raw;
+  const el=document.getElementById('bib_thumb_gif');if(el) el.innerHTML=`<img src="${raw}">`;e.target.value='';
+};
+document.getElementById('fi_bib_audio').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  const raw=await lerArq(e.target.files[0]);S.bibAudioT=raw;
+  const el=document.getElementById('bib_thumb_audio');if(el) el.innerHTML=`<audio controls src="${raw}" style="width:100%;height:28px"></audio>`;e.target.value='';
+};
+document.getElementById('fi_musica').onchange = async e=>{
+  for(const f of Array.from(e.target.files)){
+    const raw=await lerArq(f);
+    await dbAdd('musicas',{nome:f.name.replace(/\.[^.]+$/,''),arquivo:raw,criadoEm:Date.now()});
+  }
+  e.target.value='';
+  if(S.tab==='musica') render();
+};
+document.getElementById('fi_import').onchange = async e=>{
+  if(!e.target.files[0]) return;
+  try{
+    const txt=await new Promise(ok=>{const r=new FileReader();r.onload=ev=>ok(ev.target.result);r.readAsText(e.target.files[0]);});
+    const d=JSON.parse(txt);
+    let msg='';
+    if(d.exercicios&&d.exercicios.length){
+      let n=0;for(const ex of d.exercicios){const novo={...ex};delete novo.id;await dbAdd('exercicios',novo);n++;}
+      msg+=`✅ ${n} exercício(s) importado(s)!\n`;
+    }
+    if(d.biblioteca&&d.biblioteca.length){
+      let n=0;for(const b of d.biblioteca){const novo={...b};delete novo.id;await dbAdd('biblioteca',novo);n++;}
+      msg+=`📚 ${n} item(ns) da biblioteca importado(s)!\n`;
+    }
+    if(msg) alert(msg); else alert('Nada foi importado. Verifique o arquivo.');
+    render();
+  }catch(err){alert('Erro ao importar: arquivo inválido.');}
+  e.target.value='';
+};
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function setTab(t){
+  S.tab=t;
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    const names=['hoje','plano','biblioteca','musica','timer','historico','export'];
+    el.classList.toggle('on', names[i]===t);
+  });
+  render();
+}
+
+// ══════════════════════════════════════
+// RENDER PRINCIPAL
+// ══════════════════════════════════════
+async function render(){
+  const body=document.getElementById('mainBody');
+  if(!body) return;
+  if(S.tab==='hoje')        body.innerHTML=await buildHoje();
+  else if(S.tab==='plano')  body.innerHTML=await buildPlano();
+  else if(S.tab==='biblioteca') body.innerHTML=await buildBiblioteca();
+  else if(S.tab==='musica') body.innerHTML=await buildMusica();
+  else if(S.tab==='timer')  body.innerHTML=buildTimer();
+  else if(S.tab==='historico') body.innerHTML=await buildHistorico();
+  else if(S.tab==='export') body.innerHTML=await buildExport();
+  if(S.tab==='timer') updTimerUI();
+}
+
+// ══════════════════════════════════════
+// ABA HOJE
+// ══════════════════════════════════════
+async function buildHoje(){
+  const hoje=diaHoje();
+  const exs=await dbIdx('exercicios','dia',S.diaAtivo);
+  let totalS=0,feitasS=0;
+  exs.forEach(ex=>{(ex.series||[]).forEach(s=>{totalS++;if(s.feita)feitasS++;});});
+  const pct=totalS>0?Math.round(feitasS/totalS*100):0;
+
+  const diasHtml=DIAS.map(d=>{
+    const isH=d.id===hoje,isA=d.id===S.diaAtivo;
+    return`<div class="day-pill${isA?' on':''}${isH?' hoje':''}" onclick="setDia('${d.id}')">
+      <div class="day-nome">${d.nome}</div>
+      <div class="day-num">${DIAS.indexOf(d)+1}</div>
+      ${isA&&totalS>0?`<div class="day-dot"></div>`:''}
+    </div>`;
+  }).join('');
+
+  const diaObj=DIAS.find(d=>d.id===S.diaAtivo);
+  const progHtml=totalS>0?`<div class="prog-wrap">
+    <div class="prog-hdr">
+      <span style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">${feitasS}/${totalS} séries</span>
+      <span id="progPct" style="font-size:13px;font-weight:900;color:#ff7733;font-family:'JetBrains Mono',monospace">${pct}%</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:${pct}%"></div></div>
+  </div>`:''
+
+  const exsHtml=exs.length===0
+    ?`<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-txt">Sem exercícios</div><div class="empty-hint">Adicione exercícios para começar</div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center">
+        <button class="btn primary sm" onclick="abrirModalEx(null)">+ Criar Exercício</button>
+        <button class="btn blue sm" onclick="setTab('biblioteca')">📚 Biblioteca</button>
+      </div></div>`
+    :exs.map(ex=>buildExCard(ex)).join('');
+
+  return`<div style="overflow-x:auto;margin:-12px -12px 0;padding:0 12px">
+      <div class="days-row">${diasHtml}</div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📋 ${diaObj?.full||'Hoje'}</div>
+        <span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">${exs.length} exerc.</span>
+      </div>
+      ${progHtml}
+      <div class="card-body" style="gap:0">${exsHtml}</div>
+    </div>
+    ${exs.length>0?`<div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn secondary sm" onclick="abrirModalEx(null)">+ Exercício</button>
+      <button class="btn blue sm" onclick="setTab('biblioteca')">📚 Biblioteca</button>
+      <button class="btn primary sm" onclick="registrarSessao()">✅ Finalizar</button>
+    </div>`:''}`;
+}
+
+function buildExCard(ex){
+  const totalS=(ex.series||[]).length;
+  const feitasS=(ex.series||[]).filter(s=>s.feita).length;
+  const ok=totalS>0&&feitasS===totalS;
+  const exp=S.expandido.has(ex.id);
+
+  let thumbHtml;
+  if(ex.foto) thumbHtml=`<div class="ex-thumb"><img src="${ex.foto}" loading="lazy"></div>`;
+  else if(ex.gif) thumbHtml=`<div class="ex-thumb" style="background:rgba(255,85,0,.1);border-color:rgba(255,85,0,.3);flex-direction:column;gap:1px"><span style="font-size:18px">🎞️</span><span style="font-size:8px;color:#ff7733;font-weight:800">GIF</span></div>`;
+  else thumbHtml=`<div class="ex-thumb">${ex.emoji||'💪'}</div>`;
+
+  const midBadges=!exp?[ex.gif?`<span class="midia-badge">🎞️ GIF</span>`:'',ex.audio?`<span class="midia-badge">🔊</span>`:'',ex.observacao?`<span class="midia-badge">📝</span>`:''].filter(Boolean).join(''):'';
+
+  const miniS=totalS>0&&!exp?(ex.series||[]).map((s,i)=>`<div class="ms${s.feita?' done':''}" onclick="event.stopPropagation();toggleSerie(${ex.id},${i})"><span class="ms-n">${i+1}</span><span class="ms-r">${s.reps||0}x${s.peso?' ·'+s.peso+'kg':''}</span></div>`).join(''):'';
+
+  const seriesHtml=totalS>0?(ex.series||[]).map((s,i)=>`<div class="serie${s.feita?' done':''}" onclick="toggleSerie(${ex.id},${i})"><div class="serie-num">${i+1}</div><div class="serie-meta">${s.reps||0}x${s.peso?'\n'+s.peso+'kg':''}</div></div>`).join(''):'';
+
+  const corpoHtml=exp?`<div class="ex-body">
+    ${ex.gif?`<div class="gif-expand"><img src="${ex.gif}" loading="lazy"><div class="gif-lbl">🎞️ GIF de Execução</div></div>`:''}
+    ${ex.foto&&!ex.gif?`<div class="gif-expand" style="max-height:180px"><img src="${ex.foto}" loading="lazy" style="max-height:180px;object-fit:cover"></div>`:''}
+    ${ex.audio?`<div class="audio-player"><span style="font-size:15px">🔊</span><audio controls src="${ex.audio}" style="flex:1;height:30px"></audio></div>`:''}
+    ${ex.observacao?`<div class="obs-block">${ex.observacao}</div>`:''}
+    ${totalS>0?`<div class="series-grid">${seriesHtml}</div>`:''}
+    ${totalS>0?`<div class="timer-row-mini">
+      <button class="btn secondary sm" style="font-size:11px" onclick="quickTimer(30)">⏱ 30s</button>
+      <button class="btn secondary sm" style="font-size:11px" onclick="quickTimer(60)">⏱ 60s</button>
+      <button class="btn secondary sm" style="font-size:11px" onclick="quickTimer(90)">⏱ 90s</button>
+      <button class="btn primary sm" style="font-size:11px" onclick="setTab('timer')">⚙️ Timer</button>
+    </div>`:''}
+  </div>`:'';
+
+  const chevron=`<div class="ex-chevron${exp?' open':''}">${exp?'▲':'▼'}</div>`;
+
+  return`<div class="ex${ok?' ok':''}${exp?' open':''}" id="ex_${ex.id}">
+    <div class="ex-head" onclick="toggleEx(${ex.id})">
+      ${thumbHtml}
+      <div class="ex-info">
+        <div class="ex-nome">${ex.nome||'Exercício'}</div>
+        <div class="ex-meta">${totalS} série${totalS!==1?'s':''} · ${ex.grupMuscular||'Geral'}${feitasS>0?` <span style="color:var(--green)">· ${feitasS}/${totalS} ✓</span>`:''}</div>
+        ${midBadges?`<div style="display:flex;gap:3px;margin-top:3px;flex-wrap:wrap">${midBadges}</div>`:''}
+      </div>
+      <div class="ex-right" onclick="event.stopPropagation()">
+        <div class="ex-check${ok?' done':''}">${ok?'✓':''}</div>
+        <div class="ex-btns-mini">
+          <button class="ex-btn-tiny" onclick="editarEx(${ex.id})">✏️</button>
+          <button class="ex-btn-tiny" onclick="deletarEx(${ex.id})">🗑️</button>
+        </div>
+        ${chevron}
+      </div>
+    </div>
+    ${!exp&&totalS>0?`<div class="mini-series">${miniS}</div>`:''}
+    ${corpoHtml}
+  </div>`;
+}
+
+async function toggleEx(id){
+  if(S.expandido.has(id)) S.expandido.delete(id); else S.expandido.add(id);
+  const el=document.getElementById('ex_'+id);
+  if(!el) return;
+  const ex=await dbGet('exercicios',id);
+  if(!ex) return;
+  const tmp=document.createElement('div');tmp.innerHTML=buildExCard(ex);
+  el.replaceWith(tmp.firstElementChild);
+}
+async function updProg(){
+  const exs=await dbIdx('exercicios','dia',S.diaAtivo);
+  let total=0,feitas=0;
+  exs.forEach(ex=>(ex.series||[]).forEach(s=>{total++;if(s.feita)feitas++;}));
+  const pct=total>0?Math.round(feitas/total*100):0;
+  const f=document.getElementById('progFill');const p=document.getElementById('progPct');
+  if(f)f.style.width=pct+'%';if(p)p.textContent=pct+'%';
+}
+
+// ══════════════════════════════════════
+// ABA PLANO
+// ══════════════════════════════════════
+async function buildPlano(){
+  const todos=await dbAll('exercicios');
+  const sessoes=await dbAll('sessoes');
+  const diasHtml=DIAS.map(d=>{
+    const exs=todos.filter(e=>e.dia===d.id);
+    const grupos=[...new Set(exs.map(e=>e.grupMuscular).filter(Boolean))];
+    return`<div class="dia-card${d.id===S.diaAtivo?' on':''}" onclick="setDia('${d.id}');setTab('hoje')">
+      <div class="dia-nome">${d.full}</div>
+      <div class="dia-qtd">${exs.length>0?exs.length+' exercícios':'Descanso'}</div>
+      ${grupos.length>0?`<div class="tag-row" style="margin-top:6px">${grupos.map(g=>`<span class="badge o">${g}</span>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  return`<div class="card">
+      <div class="card-head"><div class="card-title">📅 Semana</div>
+        <button class="btn secondary sm" style="width:auto" onclick="abrirModalEx(null)">+ Novo</button>
+      </div>
+      <div class="card-body"><div class="week-grid">${diasHtml}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">📊 Resumo</div></div>
+      <div class="card-body">
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-icon">🏋️</div><div class="stat-val">${todos.length}</div><div class="stat-lbl">Exercícios</div></div>
+          <div class="stat-box"><div class="stat-icon">📅</div><div class="stat-val">${new Set(todos.map(e=>e.dia)).size}</div><div class="stat-lbl">Dias/sem</div></div>
+          <div class="stat-box"><div class="stat-icon">✅</div><div class="stat-val">${sessoes.length}</div><div class="stat-lbl">Treinos</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════
+function buildTimer(){
+  const presets=[30,45,60,90,120,180];
+  const circ=2*Math.PI*78;
+  return`<div class="card">
+    <div class="card-head"><div class="card-title">⏱️ Cronômetro de Descanso</div></div>
+    <div class="timer-wrap">
+      <div class="timer-ring">
+        <svg viewBox="0 0 180 180">
+          <circle class="t-bg" cx="90" cy="90" r="78"/>
+          <circle id="timerFg" class="t-fg" cx="90" cy="90" r="78" stroke="#ff5500" stroke-dasharray="${circ}" stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-center">
+          <div class="timer-txt" id="timerTxt">${fmtTimer(S.timerRest)}</div>
+          <div class="timer-lbl" id="timerLbl">PRONTO</div>
+        </div>
+      </div>
+      <div class="timer-btns">
+        <button class="t-btn stop" onclick="resetTimer()">↺</button>
+        <button class="t-btn play" id="timerPlayBtn" onclick="pauseTimer()">${S.timerOn?'⏸':'▶'}</button>
+        <button class="t-btn stop" onclick="stopTimer();S.timerRest=S.timerSeg;updTimerUI()">⏹</button>
+      </div>
+      <div class="presets">${presets.map(s=>`<div class="preset${S.timerSeg===s?' on':''}" onclick="setPreset(${s})">${s<60?s+'s':(s/60)+'min'}</div>`).join('')}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">⚙️ Tempo Personalizado</div></div>
+    <div class="card-body">
+      <div class="row">
+        <div class="field"><div class="lbl">Minutos</div><input type="number" id="custMin" class="inp" value="${Math.floor(S.timerSeg/60)}" min="0" max="99"></div>
+        <div class="field"><div class="lbl">Segundos</div><input type="number" id="custSec" class="inp" value="${S.timerSeg%60}" min="0" max="59"></div>
+      </div>
+      <button class="btn primary" onclick="aplicarCustomTimer()">▶ Iniciar com esse tempo</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">🔔 Como funciona</div></div>
+    <div class="card-body">
+      <div class="info-block">
+        ✅ Timer usa <b>timestamps absolutos</b> — funciona mesmo com tela bloqueada.<br>
+        ✅ <b>Notificação push</b> ao terminar (autorize quando pedido).<br>
+        ✅ <b>Vibração</b> ao finalizar em celulares compatíveis.<br>
+        ✅ Beeps sonoros nos últimos 3 segundos.<br>
+        ✅ Toque uma série para marcá-la — timer de 60s inicia automático!
+      </div>
+      <button class="btn secondary" onclick="pedirNotif();alert('Notificações configuradas! ✅')">🔔 Autorizar Notificações</button>
+    </div>
+  </div>`;
+}
+
+function setPreset(s){stopTimer();S.timerSeg=s;S.timerRest=s;updTimerUI();render();}
+function quickTimer(s){S.timerSeg=s;startTimer(s);}
+function aplicarCustomTimer(){
+  const min=parseInt(document.getElementById('custMin')?.value)||0;
+  const sec=parseInt(document.getElementById('custSec')?.value)||0;
+  const total=min*60+sec;if(total<1){alert('Informe um tempo válido!');return;}
+  S.timerSeg=total;startTimer(total);
+}
+
+// ══════════════════════════════════════
+// HISTÓRICO
+// ══════════════════════════════════════
+async function buildHistorico(){
+  const sessoes=await dbAll('sessoes');
+  sessoes.sort((a,b)=>b.inicio-a.inicio);
+  if(!sessoes.length) return`<div class="empty" style="padding:48px 20px"><div class="empty-icon">📊</div><div class="empty-txt">Nenhum treino registrado</div></div>`;
+  const hist=sessoes.slice(0,50).map(s=>{
+    const dur=s.fim?Math.round((s.fim-s.inicio)/60000):null;
+    return`<div class="hist-item">
+      <div class="hist-dot"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${DIAS.find(d=>d.id===s.dia)?.full||s.dia} — ${s.seriesFeitas||0} séries / ${s.exerciciosFeitos||0} exerc.</div>
+        <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">${fmtData(s.inicio)}${dur?' · '+dur+' min':''}</div>
+      </div>
+      <span class="badge ${s.exerciciosFeitos>0?'g':'z'}">${s.exerciciosFeitos||0} ✓</span>
+    </div>`;
+  }).join('');
+  return`<div class="card">
+    <div class="card-head"><div class="card-title">📊 Histórico</div><span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">${sessoes.length} sessões</span></div>
+    <div class="card-body">${hist}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════
+// MÚSICA
+// ══════════════════════════════════════
+async function buildMusica(){
+  const lista=await dbAll('musicas');
+  S.musicaList=lista;
+  const nowHtml=S.musicaAtual?`<div class="now-playing">
+    <div class="now-play-hdr">
+      <div class="now-play-art">🎵</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${S.musicaAtual.nome}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">Reproduzindo agora</div>
+      </div>
+    </div>
+    <div class="now-play-controls">
+      <button class="side-btn" onclick="musAnterior()">⏮</button>
+      <button class="main-btn" onclick="musPlayPause()">${S.musicaPlaying?'⏸':'▶'}</button>
+      <button class="side-btn" onclick="musProxima()">⏭</button>
+      <button class="side-btn" onclick="musStop()">⏹</button>
+    </div>
+    <input type="range" class="prog-audio" id="musProgBar" min="0" max="100" value="0" oninput="musScrub(this.value)">
+    <div class="vol-row">
+      <span>🔈</span>
+      <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="${S.musicaAudio?.volume||1}" oninput="musVol(this.value)">
+      <span>🔊</span>
+    </div>
+  </div>`:'';
+
+  const listaHtml=lista.length===0
+    ?`<div class="empty"><div class="empty-icon">🎵</div><div class="empty-txt">Nenhuma música</div><div class="empty-hint">Importe arquivos de áudio (mp3, m4a, ogg...)</div></div>`
+    :lista.map(m=>`<div class="music-track${S.musicaAtual?.id===m.id?' playing':''}" onclick="musPlay(${m.id})">
+      <div class="music-art" style="background:${S.musicaAtual?.id===m.id?'rgba(255,85,0,.2)':'rgba(255,255,255,.05)'}">🎵</div>
+      <div class="music-info">
+        <div class="music-name">${m.nome}</div>
+        <div class="music-meta">${S.musicaAtual?.id===m.id&&S.musicaPlaying?'▶ Tocando':'Pausado'}</div>
+      </div>
+      <button class="music-play-btn${S.musicaAtual?.id===m.id?' on':''}" onclick="event.stopPropagation();${S.musicaAtual?.id===m.id?'musPlayPause()':'musPlay('+m.id+')'}">${S.musicaAtual?.id===m.id&&S.musicaPlaying?'⏸':'▶'}</button>
+      <button style="background:none;border:none;color:rgba(255,80,80,.35);font-size:14px;cursor:pointer;padding:4px;margin-left:2px" onclick="event.stopPropagation();musDeletar(${m.id})">🗑️</button>
+    </div>`).join('');
+
+  return`${nowHtml}
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">🎵 Músicas</div>
+      <button class="btn primary sm" style="width:auto" onclick="document.getElementById('fi_musica').click()">+ Importar</button>
+    </div>
+    <div class="music-wrap">${listaHtml}</div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">💡 Dica</div></div>
+    <div class="card-body">
+      <div class="info-block">🎵 Importe arquivos <b>mp3, m4a, wav, ogg</b> do seu celular.<br>🔒 A música continua tocando mesmo com a tela bloqueada.<br>⏭ Use os controles acima para navegar entre faixas.</div>
+    </div>
+  </div>`;
+}
+
+// música global (não para quando muda de aba)
+function musPlay(id){
+  const m=S.musicaList.find(x=>x.id===id);
+  if(!m) return;
+  if(S.musicaAudio&&S.musicaAtual?.id===id){musPlayPause();return;}
+  if(S.musicaAudio){S.musicaAudio.pause();S.musicaAudio=null;}
+  S.musicaAtual=m;
+  S.musicaAudio=new Audio(m.arquivo);
+  S.musicaAudio.volume=1;
+  S.musicaAudio.play().catch(()=>{});
+  S.musicaPlaying=true;
+  S.musicaAudio.addEventListener('ended',musProxima);
+  S.musicaAudio.addEventListener('timeupdate',updMusicProg);
+  if(S.tab==='musica') render();
+}
+function musPlayPause(){
+  if(!S.musicaAudio) return;
+  if(S.musicaPlaying){S.musicaAudio.pause();S.musicaPlaying=false;}
+  else{S.musicaAudio.play().catch(()=>{});S.musicaPlaying=true;}
+  if(S.tab==='musica') render();
+}
+function musStop(){
+  if(S.musicaAudio){S.musicaAudio.pause();S.musicaAudio=null;}
+  S.musicaAtual=null;S.musicaPlaying=false;
+  if(S.tab==='musica') render();
+}
+function musProxima(){
+  if(!S.musicaAtual||!S.musicaList.length) return;
+  const idx=S.musicaList.findIndex(m=>m.id===S.musicaAtual.id);
+  const next=S.musicaList[(idx+1)%S.musicaList.length];
+  musPlay(next.id);
+}
+function musAnterior(){
+  if(!S.musicaAtual||!S.musicaList.length) return;
+  const idx=S.musicaList.findIndex(m=>m.id===S.musicaAtual.id);
+  const prev=S.musicaList[(idx-1+S.musicaList.length)%S.musicaList.length];
+  musPlay(prev.id);
+}
+function musVol(v){if(S.musicaAudio) S.musicaAudio.volume=parseFloat(v);}
+function musScrub(v){if(S.musicaAudio&&S.musicaAudio.duration) S.musicaAudio.currentTime=v/100*S.musicaAudio.duration;}
+function updMusicProg(){
+  const el=document.getElementById('musProgBar');
+  if(el&&S.musicaAudio&&S.musicaAudio.duration) el.value=S.musicaAudio.currentTime/S.musicaAudio.duration*100;
+}
+async function musDeletar(id){
+  if(!confirm('Remover esta música?')) return;
+  if(S.musicaAtual?.id===id) musStop();
+  await dbDel('musicas',id);
+  if(S.tab==='musica') render();
+}
+function toggleMusic(){setTab('musica');}
+
+// ══════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════
+async function buildExport(){
+  return`<div class="card">
+    <div class="card-head"><div class="card-title">📤 Exportar</div></div>
+    <div class="card-body">
+      <div class="info-block" style="margin-bottom:8px">Exporte em <b>.json</b> para backup ou compartilhar. Inclui fotos, GIFs e áudios.</div>
+      <button class="btn primary" onclick="exportarTreinos(false)">📤 Exportar Todos os Treinos</button>
+      <button class="btn secondary" onclick="exportarTreinos(true)">📤 Exportar Dia Atual</button>
+      <button class="btn secondary" style="border-color:rgba(255,150,0,.3);color:#ff9500" onclick="exportarBib()">📚 Exportar Biblioteca</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">📥 Importar</div></div>
+    <div class="card-body">
+      <div class="info-block" style="margin-bottom:8px">Importe um <b>.json</b> exportado anteriormente. Itens são adicionados sem apagar os atuais.</div>
+      <button class="btn green" onclick="document.getElementById('fi_import').click()">📥 Importar Arquivo .json</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">⚠️ Redefinir</div></div>
+    <div class="card-body">
+      <button class="btn danger" onclick="resetarTudo()">🗑️ Apagar todos os dados</button>
+    </div>
+  </div>`;
+}
+async function exportarTreinos(apenasHoje){
+  const todos=await dbAll('exercicios');
+  const sessoes=await dbAll('sessoes');
+  const exs=apenasHoje?todos.filter(e=>e.dia===S.diaAtivo):todos;
+  const dados={versao:2,exportadoEm:new Date().toISOString(),app:'GymLog Pro',exercicios:exs,sessoes:apenasHoje?[]:sessoes};
+  const blob=new Blob([JSON.stringify(dados,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`gymlog-${apenasHoje?S.diaAtivo:'completo'}-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
+}
+async function exportarBib(){
+  const bib=await dbAll('biblioteca');
+  if(!bib.length){alert('Biblioteca vazia!');return;}
+  const blob=new Blob([JSON.stringify({versao:2,exportadoEm:new Date().toISOString(),app:'GymLog Pro',tipo:'biblioteca',biblioteca:bib},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`gymlog-biblioteca-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
+}
+async function resetarTudo(){
+  if(!confirm('⚠️ APAGAR TODOS OS DADOS?\nExporte antes se quiser guardar seus treinos!')) return;
+  for(const ex of await dbAll('exercicios')) await dbDel('exercicios',ex.id);
+  for(const s of await dbAll('sessoes')) await dbDel('sessoes',s.id);
+  alert('Dados apagados!');render();
+}
+
+// ══════════════════════════════════════
+// MODAL EXERCÍCIO
+// ══════════════════════════════════════
+function abrirModalEx(ex,diaForce){
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  const dia=diaForce||ex?.dia||S.diaAtivo||diaHoje();
+  const series=ex?.series||[{reps:12,peso:'',feita:false},{reps:12,peso:'',feita:false},{reps:12,peso:'',feita:false}];
+  S.fotoT=ex?.foto||null; S.gifT=ex?.gif||null; S.audioT=ex?.audio||null;
+  const diasOpts=DIAS.map(d=>`<option value="${d.id}"${d.id===dia?' selected':''}>${d.full}</option>`).join('');
+  const serHtml=series.map((s,i)=>serieEditRow(i,s.reps,s.peso)).join('');
+  const fTh=ex?.foto?`<img src="${ex.foto}">`:'<div class="media-thumb-icon">📷</div><div class="media-thumb-lbl">Foto</div>';
+  const gTh=ex?.gif?`<img src="${ex.gif}">`:'<div class="media-thumb-icon">🎞️</div><div class="media-thumb-lbl">GIF</div>';
+  const aTh=ex?.audio?`<audio controls src="${ex.audio}" style="width:100%;height:28px">`:'<div class="media-thumb-icon">🎙️</div><div class="media-thumb-lbl">Áudio</div>';
+  const isEdit=!!ex;
+  const modal=document.createElement('div');
+  modal.className='modal-bg';
+  modal.innerHTML=`<div class="modal">
+    <div class="modal-handle"></div>
+    <h2>${isEdit?'✏️ EDITAR':'➕ NOVO'} EXERCÍCIO</h2>
+    <div class="field"><div class="lbl">Nome *</div><input type="text" id="ex_nome" class="inp" placeholder="Ex: Supino Reto, Agachamento..." value="${ex?.nome||''}"></div>
+    <div class="row">
+      <div class="field"><div class="lbl">Dia</div><select id="ex_dia" class="sel">${diasOpts}</select></div>
+      <div class="field"><div class="lbl">Grupo Muscular</div><input type="text" id="ex_grupo" class="inp" placeholder="Peito, Costas..." value="${ex?.grupMuscular||''}"></div>
+    </div>
+    <div class="lbl">Mídias</div>
+    <div class="media-grid">
+      <div class="media-thumb" id="thumb_foto" onclick="document.getElementById('fi_cam').value='';document.getElementById('fi_cam').click()">${fTh}</div>
+      <div class="media-thumb" id="thumb_gif" onclick="document.getElementById('fi_gif').value='';document.getElementById('fi_gif').click()">${gTh}</div>
+      <div class="media-thumb" id="thumb_audio" onclick="document.getElementById('fi_audio').value='';document.getElementById('fi_audio').click()">${aTh}</div>
+    </div>
+    <div class="media-btns-row">
+      <div class="media-btn" onclick="document.getElementById('fi_foto').value='';document.getElementById('fi_foto').click()">🖼️ Galeria</div>
+      <div class="media-btn" onclick="removerMidia('foto')" style="color:rgba(255,100,100,.7)">🗑️ Limpar</div>
+    </div>
+    <div class="field"><div class="lbl">Observações / Execução</div><input type="text" id="ex_obs" class="inp" placeholder="Pegada pronada, 45°, controle na descida..." value="${ex?.observacao||''}"></div>
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="lbl" style="margin:0">Séries</div>
+        <button onclick="addSerieModal('seriesCont','trSR','trRp','trPe')" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(255,85,0,.3);background:rgba(255,85,0,.1);color:#ff7733;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:800;cursor:pointer">+ Série</button>
+      </div>
+      <div id="seriesCont" style="display:flex;flex-direction:column;gap:6px">${serHtml}</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn secondary sm" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove())">Cancelar</button>
+      <button class="btn blue sm" onclick="salvarExEBib(${ex?.id||'null'})">📚 + Bib.</button>
+      <button class="btn primary sm" onclick="salvarEx(${ex?.id||'null'})">💾 Salvar</button>
+    </div>
+  </div>`;
+  document.getElementById('app').appendChild(modal);
+}
+
+function serieEditRow(i,reps,peso,pref='trSR',rpref='trRp',ppref='trPe'){
+  return`<div id="${pref}${i}" class="serie-edit-row">
+    <span class="serie-edit-n">${i+1}</span>
+    <input type="number" id="${rpref}${i}" class="inp" placeholder="Reps" value="${reps||12}" min="1" style="flex:1">
+    <input type="text" id="${ppref}${i}" class="inp" placeholder="Peso kg" value="${peso||''}" style="flex:1">
+    <button class="serie-edit-del" onclick="this.closest('[id^=${pref}]').remove()">×</button>
+  </div>`;
+}
+function addSerieModal(contId,pref,rpref,ppref){
+  const cont=document.getElementById(contId);if(!cont)return;
+  const i=cont.querySelectorAll('[id^="'+pref+'"]').length;
+  const row=document.createElement('div');
+  row.innerHTML=serieEditRow(i,12,'',pref,rpref,ppref);
+  cont.appendChild(row.firstElementChild);
+}
+
+function lerSeries(contId,pref,rpref,ppref){
+  const cont=document.getElementById(contId);const series=[];
+  if(cont){cont.querySelectorAll('div[id^="'+pref+'"]').forEach(row=>{
+    const idx=row.id.replace(pref,'');
+    const re=row.querySelector('#'+rpref+idx);const pe=row.querySelector('#'+ppref+idx);
+    if(re) series.push({reps:parseInt(re.value)||12,peso:pe?.value?.trim()||'',feita:false});
+  });}
+  return series;
+}
+
+async function salvarEx(exId){
+  const nome=document.getElementById('ex_nome')?.value?.trim();
+  if(!nome){alert('Informe o nome!');return;}
+  const dia=document.getElementById('ex_dia')?.value||S.diaAtivo;
+  const grupo=document.getElementById('ex_grupo')?.value?.trim()||'';
+  const obs=document.getElementById('ex_obs')?.value?.trim()||'';
+  const series=lerSeries('seriesCont','trSR','trRp','trPe');
+  const ex={nome,dia,grupMuscular:grupo,observacao:obs,foto:S.fotoT||null,gif:S.gifT||null,audio:S.audioT||null,series};
+  if(exId){ex.id=exId;await dbPut('exercicios',ex);}else await dbAdd('exercicios',ex);
+  S.diaAtivo=dia;S.fotoT=S.gifT=S.audioT=null;
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  render();
+}
+async function salvarExEBib(exId){
+  const nome=document.getElementById('ex_nome')?.value?.trim();
+  if(!nome){alert('Informe o nome!');return;}
+  const grupo=document.getElementById('ex_grupo')?.value?.trim()||'';
+  const obs=document.getElementById('ex_obs')?.value?.trim()||'';
+  const series=lerSeries('seriesCont','trSR','trRp','trPe');
+  await dbAdd('biblioteca',{nome,grupMuscular:grupo,observacao:obs,foto:S.fotoT||null,gif:S.gifT||null,audio:S.audioT||null,series,criadoEm:Date.now(),equipamento:'',dificuldade:''});
+  await salvarEx(exId);
+  beep();
+  alert('✅ Salvo no treino e na Biblioteca!');
+}
+
+function removerMidia(tipo){
+  if(tipo==='foto'){
+    S.fotoT=null;S.gifT=null;
+    const f=document.getElementById('thumb_foto');if(f) f.innerHTML='<div class="media-thumb-icon">📷</div><div class="media-thumb-lbl">Foto</div>';
+    const g=document.getElementById('thumb_gif');if(g) g.innerHTML='<div class="media-thumb-icon">🎞️</div><div class="media-thumb-lbl">GIF</div>';
+  }else{S.audioT=null;const a=document.getElementById('thumb_audio');if(a) a.innerHTML='<div class="media-thumb-icon">🎙️</div><div class="media-thumb-lbl">Áudio</div>';}
+}
+
+async function editarEx(id){const ex=await dbGet('exercicios',id);if(ex) abrirModalEx(ex);}
+async function deletarEx(id){
+  if(!confirm('Excluir este exercício?')) return;
+  await dbDel('exercicios',id);render();
+}
+
+async function toggleSerie(exId,idx){
+  const ex=await dbGet('exercicios',exId);if(!ex||!ex.series)return;
+  ex.series[idx].feita=!ex.series[idx].feita;
+  await dbPut('exercicios',ex);
+  const el=document.getElementById('ex_'+exId);
+  if(el){const tmp=document.createElement('div');tmp.innerHTML=buildExCard(ex);el.replaceWith(tmp.firstElementChild);}
+  await updProg();
+  const feitas=ex.series.filter(s=>s.feita).length;
+  if(ex.series[idx].feita&&feitas<ex.series.length) if(!S.timerOn) startTimer(S.timerSeg||60);
+}
+
+async function registrarSessao(){
+  const exs=await dbIdx('exercicios','dia',S.diaAtivo);
+  let total=0,feitas=0,concl=0;
+  exs.forEach(ex=>{const s=ex.series||[];total+=s.length;const f=s.filter(s=>s.feita).length;feitas+=f;if(f===s.length&&s.length>0)concl++;});
+  await dbAdd('sessoes',{dia:S.diaAtivo,inicio:Date.now(),fim:Date.now(),exerciciosFeitos:concl,seriesFeitas:feitas,totalSeries:total});
+  for(const ex of exs){ex.series=(ex.series||[]).map(s=>({...s,feita:false}));await dbPut('exercicios',ex);}
+  beep();alert(`✅ Treino registrado!\n${feitas} séries em ${concl} exercícios.\nBom descanso! 💪`);render();
+}
+
+function setDia(d){S.diaAtivo=d;}
+
+// ══════════════════════════════════════
+// BIBLIOTECA
+// ══════════════════════════════════════
+async function buildBiblioteca(){
+  const todos=await dbAll('biblioteca');
+  const grupos=['todos',...new Set(todos.map(b=>b.grupMuscular).filter(Boolean))];
+  let lista=todos;
+  if(S.bibFiltro!=='todos') lista=lista.filter(b=>b.grupMuscular===S.bibFiltro);
+  if(S.bibBusca.trim()){const q=S.bibBusca.toLowerCase();lista=lista.filter(b=>b.nome.toLowerCase().includes(q)||(b.grupMuscular||'').toLowerCase().includes(q));}
+  const gruposH=grupos.map(g=>`<div class="chip${S.bibFiltro===g?' on':''}" onclick="bibFiltro('${g}')">${g==='todos'?'Todos':g}</div>`).join('');
+  const listaH=lista.length===0
+    ?`<div class="empty" style="padding:32px">${todos.length===0?`<div class="empty-icon">📚</div><div class="empty-txt">Biblioteca vazia</div><div class="empty-hint">Crie exercícios e salve-os na biblioteca</div>`:`<div class="empty-icon">🔍</div><div class="empty-txt">Sem resultados</div>`}</div>`
+    :lista.map(b=>{
+      const totalS=(b.series||[]).length;
+      const repsEx=totalS>0?`${totalS}x${b.series[0].reps||'?'} reps${b.series[0].peso?' · '+b.series[0].peso+'kg':''}`:'-';
+      let tH=`<div class="bib-thumb">💪</div>`;
+      if(b.gif) tH=`<div class="bib-thumb"><img src="${b.gif}"></div>`;
+      else if(b.foto) tH=`<div class="bib-thumb"><img src="${b.foto}"></div>`;
+      return`<div class="bib-card" onclick="bibVer(${b.id})">
+        ${tH}
+        <div class="bib-info"><div class="bib-nome">${b.nome}</div><div class="bib-meta">${b.grupMuscular||'Geral'} · ${repsEx}</div></div>
+        <div class="bib-actions">
+          <button class="bib-add" onclick="event.stopPropagation();bibAddAoDia(${b.id})">+ Dia</button>
+          <div style="display:flex;gap:4px;margin-top:3px">
+            <button style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibEditar(${b.id})">✏️</button>
+            <button style="background:none;border:none;color:rgba(255,80,80,.4);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibDeletar(${b.id})">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  return`<div class="card">
+    <div class="card-head">
+      <div class="card-title">📚 Biblioteca</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">${todos.length}</span>
+        <button class="bib-add" onclick="abrirModalBib(null)">+ Novo</button>
+      </div>
+    </div>
+    <div class="bib-search"><input type="text" class="inp" placeholder="🔍 Buscar..." value="${S.bibBusca}" oninput="bibBusca(this.value)"></div>
+    <div class="chips">${gruposH}</div>
+    <div>${listaH}</div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">💡 Como usar</div></div>
+    <div class="card-body">
+      <div class="info-block">1️⃣ Crie exercícios com GIF, áudio e séries padrão<br>2️⃣ Use <b>+ Dia</b> para adicionar ao treino da semana<br>3️⃣ O exercício é <b>copiado</b> — editar a cópia não altera a biblioteca<br>4️⃣ Na tela Hoje, ao criar exercício, clique <b>+ Bib.</b> para salvar nos dois lugares</div>
+    </div>
+  </div>`;
+}
+
+function bibFiltro(g){S.bibFiltro=g;render();}
+function bibBusca(v){S.bibBusca=v;clearTimeout(S._bibT);S._bibT=setTimeout(()=>render(),350);}
+
+function abrirModalBib(bib){
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  S.bibFotoT=bib?.foto||null;S.bibGifT=bib?.gif||null;S.bibAudioT=bib?.audio||null;
+  const series=bib?.series||[{reps:12,peso:'',feita:false},{reps:12,peso:'',feita:false},{reps:12,peso:'',feita:false}];
+  const serH=series.map((s,i)=>serieEditRow(i,s.reps,s.peso,'bSR','bRp','bPe')).join('');
+  const fTh=bib?.foto?`<img src="${bib.foto}">`:'<div class="media-thumb-icon">📷</div><div class="media-thumb-lbl">Foto</div>';
+  const gTh=bib?.gif?`<img src="${bib.gif}">`:'<div class="media-thumb-icon">🎞️</div><div class="media-thumb-lbl">GIF</div>';
+  const aTh=bib?.audio?`<audio controls src="${bib.audio}" style="width:100%;height:28px">`:'<div class="media-thumb-icon">🎙️</div><div class="media-thumb-lbl">Áudio</div>';
+  const modal=document.createElement('div');modal.className='modal-bg';
+  modal.innerHTML=`<div class="modal">
+    <div class="modal-handle"></div>
+    <h2>${bib?'✏️ EDITAR':'📚 NOVA'} BIBLIOTECA</h2>
+    <div class="field"><div class="lbl">Nome *</div><input type="text" id="bib_nome" class="inp" value="${bib?.nome||''}" placeholder="Ex: Supino Reto com Barra"></div>
+    <div class="row">
+      <div class="field"><div class="lbl">Grupo Muscular</div><input type="text" id="bib_grupo" class="inp" value="${bib?.grupMuscular||''}" placeholder="Peito, Costas..."></div>
+      <div class="field"><div class="lbl">Equipamento</div><input type="text" id="bib_equip" class="inp" value="${bib?.equipamento||''}" placeholder="Barra, Haltere..."></div>
+    </div>
+    <div class="field"><div class="lbl">Dificuldade</div>
+      <select id="bib_dif" class="sel">
+        <option value=""${!bib?.dificuldade?' selected':''}>— Selecione —</option>
+        ${['Iniciante','Intermediário','Avançado'].map(d=>`<option value="${d}"${bib?.dificuldade===d?' selected':''}>${d}</option>`).join('')}
+      </select>
+    </div>
+    <div class="lbl">Mídia</div>
+    <div class="media-grid">
+      <div class="media-thumb" id="bib_thumb_foto" onclick="document.getElementById('fi_bib_foto').click()">${fTh}</div>
+      <div class="media-thumb" id="bib_thumb_gif" onclick="document.getElementById('fi_bib_gif').click()">${gTh}</div>
+      <div class="media-thumb" id="bib_thumb_audio" onclick="document.getElementById('fi_bib_audio').click()">${aTh}</div>
+    </div>
+    <div class="field"><div class="lbl">Observações / Execução</div><textarea id="bib_obs" class="textarea" rows="3" placeholder="Descreva a execução, pegada, ângulo...">${bib?.observacao||''}</textarea></div>
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="lbl" style="margin:0">Séries Padrão</div>
+        <button onclick="addSerieModal('bibSeriesCont','bSR','bRp','bPe')" style="padding:5px 12px;border-radius:20px;border:1px solid rgba(255,85,0,.3);background:rgba(255,85,0,.1);color:#ff7733;font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:800;cursor:pointer">+ Série</button>
+      </div>
+      <div id="bibSeriesCont" style="display:flex;flex-direction:column;gap:6px">${serH}</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn secondary sm" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove())">Cancelar</button>
+      <button class="btn primary sm" onclick="bibSalvar(${bib?.id||'null'})">💾 Salvar na Biblioteca</button>
+    </div>
+  </div>`;
+  document.getElementById('app').appendChild(modal);
+}
+
+async function bibSalvar(bibId){
+  const nome=document.getElementById('bib_nome')?.value?.trim();if(!nome){alert('Informe o nome!');return;}
+  const grupo=document.getElementById('bib_grupo')?.value?.trim()||'';
+  const equip=document.getElementById('bib_equip')?.value?.trim()||'';
+  const dif=document.getElementById('bib_dif')?.value||'';
+  const obs=document.getElementById('bib_obs')?.value?.trim()||'';
+  const series=lerSeries('bibSeriesCont','bSR','bRp','bPe');
+  const bib={nome,grupMuscular:grupo,equipamento:equip,dificuldade:dif,observacao:obs,foto:S.bibFotoT||null,gif:S.bibGifT||null,audio:S.bibAudioT||null,series,criadoEm:Date.now()};
+  if(bibId){bib.id=bibId;await dbPut('biblioteca',bib);}else await dbAdd('biblioteca',bib);
+  S.bibFotoT=S.bibGifT=S.bibAudioT=null;
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  render();
+}
+
+async function bibVer(id){
+  const bib=await dbGet('biblioteca',id);if(!bib)return;
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  const totalS=(bib.series||[]).length;
+  const repsInfo=totalS>0?bib.series.map((s,i)=>`<div class="detail-row"><span class="k">Série ${i+1}</span><span class="v">${s.reps||'?'} reps${s.peso?' · '+s.peso+'kg':''}</span></div>`).join(''):'<div style="font-size:12px;color:var(--text3)">Nenhuma série configurada.</div>';
+  const modal=document.createElement('div');modal.className='modal-bg';
+  modal.innerHTML=`<div class="modal">
+    <div class="modal-handle"></div>
+    ${bib.gif?`<div class="gif-expand"><img src="${bib.gif}"><div class="gif-lbl">🎞️ GIF de Execução</div></div>`:''}
+    ${!bib.gif&&bib.foto?`<img src="${bib.foto}" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;border:1px solid var(--border)">`:''}
+    <h2>${bib.nome}</h2>
+    <div class="tag-row">
+      ${bib.grupMuscular?`<span class="badge o">${bib.grupMuscular}</span>`:''}
+      ${bib.equipamento?`<span class="badge z">🏋️ ${bib.equipamento}</span>`:''}
+      ${bib.dificuldade?`<span class="badge g">${bib.dificuldade}</span>`:''}
+    </div>
+    ${bib.observacao?`<div class="obs-block">${bib.observacao}</div>`:''}
+    ${bib.audio?`<div class="audio-player"><span style="font-size:15px">🔊</span><audio controls src="${bib.audio}" style="flex:1;height:30px"></audio></div>`:''}
+    <div class="lbl">Séries Padrão</div>${repsInfo}
+    <div class="modal-btns" style="flex-wrap:wrap">
+      <button class="btn primary sm" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove());bibAddAoDia(${id})">+ Adicionar ao Dia</button>
+      <button class="btn secondary sm" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove());bibEditar(${id})">✏️ Editar</button>
+      <button class="btn secondary sm" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove())">Fechar</button>
+    </div>
+  </div>`;
+  document.getElementById('app').appendChild(modal);
+}
+
+async function bibEditar(id){const b=await dbGet('biblioteca',id);if(b) abrirModalBib(b);}
+async function bibDeletar(id){
+  if(!confirm('Excluir da biblioteca?')) return;
+  await dbDel('biblioteca',id);render();
+}
+
+function bibAddAoDia(id){
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  const modal=document.createElement('div');modal.className='modal-bg';
+  modal.innerHTML=`<div class="modal">
+    <div class="modal-handle"></div>
+    <h2>📅 ADICIONAR AO DIA</h2>
+    <div style="font-size:13px;color:var(--text2)">Escolha o dia da semana:</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${DIAS.map(d=>`<button class="btn secondary" style="justify-content:flex-start;gap:10px" onclick="bibConfirmarAdd(${id},'${d.id}')">📅 ${d.full}</button>`).join('')}
+    </div>
+    <button class="btn danger" onclick="document.querySelectorAll('.modal-bg').forEach(e=>e.remove())">Cancelar</button>
+  </div>`;
+  document.getElementById('app').appendChild(modal);
+}
+
+async function bibConfirmarAdd(bibId,dia){
+  const bib=await dbGet('biblioteca',bibId);if(!bib)return;
+  await dbAdd('exercicios',{nome:bib.nome,dia,grupMuscular:bib.grupMuscular||'',equipamento:bib.equipamento||'',dificuldade:bib.dificuldade||'',observacao:bib.observacao||'',foto:bib.foto||null,gif:bib.gif||null,audio:bib.audio||null,series:(bib.series||[]).map(s=>({...s,feita:false})),origemBiblioteca:bibId});
+  document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
+  S.tab='hoje';S.diaAtivo=dia;render();beep();
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+pedirNotif();
+render();
+</script>
+</body>
+</html>
