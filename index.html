@@ -496,6 +496,12 @@ function showAlarm(){
   setTimeout(()=>{if(el.parentNode)el.remove();},40000);
 }
 
+//FUNÇÃO PARA NORMALIZAR TEXTO NA BUSCA
+// Função para remover acentos e deixar tudo em minúsculo
+function normalizar(txt) {
+  return txt.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 // ══════════════════════════════════════
 // IMAGEM / ARQUIVO
 // ══════════════════════════════════════
@@ -1165,7 +1171,13 @@ async function buildBiblioteca(){
   const grupos=['todos',...new Set(todos.map(b=>b.grupMuscular).filter(Boolean))];
   let lista=todos;
   if(S.bibFiltro!=='todos') lista=lista.filter(b=>b.grupMuscular===S.bibFiltro);
-  if(S.bibBusca.trim()){const q=S.bibBusca.toLowerCase();lista=lista.filter(b=>b.nome.toLowerCase().includes(q)||(b.grupMuscular||'').toLowerCase().includes(q));}
+  if(S.bibBusca.trim()){
+    const buscaNormalizada = normalizar(S.bibBusca);
+    lista = lista.filter(b => 
+      normalizar(b.nome || "").includes(buscaNormalizada) || 
+      normalizar(b.grupMuscular || "").includes(buscaNormalizada)
+    );
+  }
   const gruposH=grupos.map(g=>`<div class="chip${S.bibFiltro===g?' on':''}" onclick="bibFiltro('${g}')">${g==='todos'?'Todos':g}</div>`).join('');
   const listaH=lista.length===0
     ?`<div class="empty" style="padding:32px">${todos.length===0?`<div class="empty-icon">📚</div><div class="empty-txt">Biblioteca vazia</div><div class="empty-hint">Crie exercícios e salve-os na biblioteca</div>`:`<div class="empty-icon">🔍</div><div class="empty-txt">Sem resultados</div>`}</div>`
@@ -1208,7 +1220,7 @@ async function buildBiblioteca(){
 }
 
 function bibFiltro(g){S.bibFiltro=g;render();}
-function bibBusca(v){S.bibBusca=v;clearTimeout(S._bibT);S._bibT=setTimeout(()=>render(),350);}
+function bibBusca(v){S.bibBusca=v;clearTimeout(S._bibT);S._bibT=setTimeout(()=>render(),950);}
 
 function abrirModalBib(bib){
   document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
