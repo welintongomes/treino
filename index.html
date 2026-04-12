@@ -1029,6 +1029,12 @@ function abrirModalEx(ex,diaForce){
   const isEdit=!!ex;
   const modal=document.createElement('div');
   modal.className='modal-bg';
+  // NOVA FUNÇÃO: Clicar fora fecha
+modal.addEventListener('click', function(e) {
+  if (e.target === modal) {
+    modal.remove();
+  }
+});
   modal.innerHTML=`<div class="modal">
     <div class="modal-handle"></div>
     <h2>${isEdit?'✏️ EDITAR':'➕ NOVO'} EXERCÍCIO</h2>
@@ -1318,6 +1324,16 @@ async function bibConfirmarAdd(bibId,dia){
   document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
   S.tab='hoje';S.diaAtivo=dia;render();beep();
 }
+// Monitor global para fechar qualquer modal ao clicar no fundo
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-bg')) {
+    e.target.remove(); // Remove o modal-bg da tela
+    
+    // Limpa variáveis temporárias de mídia se necessário
+    S.fotoT = S.gifT = S.audioT = null; 
+    S.bibFotoT = S.bibGifT = S.bibAudioT = null;
+  }
+});
 
 // ══════════════════════════════════════
 // INIT
