@@ -7,8 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a0a">
 <title>GYMLOG PRO</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -431,6 +429,10 @@ let S = {
   // musica
   musicaAtual:null, musicaObj:null, musicaPlaying:false, musicaList:[],
   musicaAudio: null,
+  musicaModo: 'todas', // NOVO: 'todas', 'uma' ou 'aleatorio'
+  musicaFilaAleatoria: [], // NOVO: Guarda as músicas que ainda não tocaram no ciclo
+  bibFiltro:'todos', bibBusca:'', bibLimite: 5, // NOVO: Controle de quantos carregar
+  musicaVolume: 1, // NOVO: Memória do volume (começa no 100%)
 };
 
 // ══════════════════════════════════════
@@ -646,15 +648,21 @@ async function buildHoje(){
     <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:${pct}%"></div></div>
   </div>`:''
 
-  const exsHtml=exs.length===0
-    ?`<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-txt">Sem exercícios</div><div class="empty-hint">Adicione exercícios para começar</div>
+const expandedId = Array.from(S.expandido)[0]; // Pega o ID aberto (se houver)
+
+  const exsHtml = exs.length === 0
+    ? `<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-txt">Sem exercícios</div><div class="empty-hint">Adicione exercícios para começar</div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;justify-content:center">
         <button class="btn primary sm" onclick="abrirModalEx(null)">+ Criar Exercício</button>
         <button class="btn blue sm" onclick="setTab('biblioteca')">📚 Biblioteca</button>
       </div></div>`
-    :exs.map(ex=>buildExCard(ex)).join('');
+    : exs.map(ex => {
+        // Se existe um exercício expandido e não for este da lista, esconda-o
+        if (expandedId && ex.id !== expandedId) return ''; 
+        return buildExCard(ex);
+      }).join('');
 
-  return`<div style="overflow-x:auto;margin:-12px -12px 0;padding:0 12px">
+  return`<div style="overflow-x:visible;margin:-12px -12px 0;padding:0 12px">
       <div class="days-row">${diasHtml}</div>
     </div>
     <div class="card">
@@ -728,14 +736,17 @@ function buildExCard(ex){
 }
 
 async function toggleEx(id){
-  if(S.expandido.has(id)) S.expandido.delete(id); else S.expandido.add(id);
-  const el=document.getElementById('ex_'+id);
-  if(!el) return;
-  const ex=await dbGet('exercicios',id);
-  if(!ex) return;
-  const tmp=document.createElement('div');tmp.innerHTML=buildExCard(ex);
-  el.replaceWith(tmp.firstElementChild);
+  if(S.expandido.has(id)) {
+    S.expandido.delete(id); // Fecha se clicar no que já está aberto
+  } else {
+    S.expandido.clear(); // Limpa a lista garantindo que só 1 fique aberto
+    S.expandido.add(id);
+  }
+  // Ao invés de substituir apenas um elemento, re-renderiza a aba 
+  // para esconder ou mostrar o resto da lista.
+  if(S.tab === 'hoje') render(); 
 }
+
 async function updProg(){
   const exs=await dbIdx('exercicios','dia',S.diaAtivo);
   let total=0,feitas=0;
@@ -762,7 +773,7 @@ async function buildPlano(){
   }).join('');
   return`<div class="card">
       <div class="card-head"><div class="card-title">📅 Semana</div>
-        <button class="btn secondary sm" style="width:auto" onclick="abrirModalEx(null)">+ Novo</button>
+        <button class="btn secondary sm" style="width:auto; margin: 2px 2px 2px 40px; onclick="abrirModalEx(null)">+ Novo</button>
       </div>
       <div class="card-body"><div class="week-grid">${diasHtml}</div></div>
     </div>
@@ -869,6 +880,7 @@ async function buildHistorico(){
 async function buildMusica(){
   const lista=await dbAll('musicas');
   S.musicaList=lista;
+  const iconesModo = { todas: '🔁', uma: '🔂', aleatorio: '🔀' };
   const nowHtml=S.musicaAtual?`<div class="now-playing">
     <div class="now-play-hdr">
       <div class="now-play-art">🎵</div>
@@ -877,7 +889,9 @@ async function buildMusica(){
         <div style="font-size:10px;color:var(--text3);margin-top:2px">Reproduzindo agora</div>
       </div>
     </div>
-    <div class="now-play-controls">
+    
+<div class="now-play-controls">
+      <button class="side-btn" onclick="musMudarModo()" style="font-size:18px">${iconesModo[S.musicaModo || 'todas']}</button>
       <button class="side-btn" onclick="musAnterior()">⏮</button>
       <button class="main-btn" onclick="musPlayPause()">${S.musicaPlaying?'⏸':'▶'}</button>
       <button class="side-btn" onclick="musProxima()">⏭</button>
@@ -886,7 +900,7 @@ async function buildMusica(){
     <input type="range" class="prog-audio" id="musProgBar" min="0" max="100" value="0" oninput="musScrub(this.value)">
     <div class="vol-row">
       <span>🔈</span>
-      <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="${S.musicaAudio?.volume||1}" oninput="musVol(this.value)">
+      <input type="range" class="vol-slider" min="0" max="1" step="0.01" value="${S.musicaVolume}" oninput="musVol(this.value)">
       <span>🔊</span>
     </div>
   </div>`:'';
@@ -907,7 +921,7 @@ async function buildMusica(){
   <div class="card">
     <div class="card-head">
       <div class="card-title">🎵 Músicas</div>
-      <button class="btn primary sm" style="width:auto" onclick="document.getElementById('fi_musica').click()">+ Importar</button>
+      <button class="btn primary sm" style="width:auto; margin: 0px 2px 0px 40px; onclick="document.getElementById('fi_musica').click()">+ Importar</button>
     </div>
     <div class="music-wrap">${listaHtml}</div>
   </div>
@@ -920,18 +934,27 @@ async function buildMusica(){
 }
 
 // música global (não para quando muda de aba)
-function musPlay(id){
+// Adicionamos um parâmetro "force" para obrigar a reiniciar a música quando necessário
+function musPlay(id, force = false){
   const m=S.musicaList.find(x=>x.id===id);
   if(!m) return;
-  if(S.musicaAudio&&S.musicaAtual?.id===id){musPlayPause();return;}
+  
+  // Se não estiver forçando o reinício, funciona como Play/Pause normal da lista
+  if(S.musicaAudio && S.musicaAtual?.id===id && !force){
+    musPlayPause();
+    return;
+  }
+  
   if(S.musicaAudio){S.musicaAudio.pause();S.musicaAudio=null;}
   S.musicaAtual=m;
   S.musicaAudio=new Audio(m.arquivo);
-  S.musicaAudio.volume=1;
+  S.musicaAudio.volume = S.musicaVolume; // Usa o volume que está salvo na memória
   S.musicaAudio.play().catch(()=>{});
   S.musicaPlaying=true;
-  S.musicaAudio.addEventListener('ended',musProxima);
-  S.musicaAudio.addEventListener('timeupdate',updMusicProg);
+  
+  // Quando a música acaba sozinha, avisa a função que foi automático
+  S.musicaAudio.addEventListener('ended', () => musProxima(true));
+  S.musicaAudio.addEventListener('timeupdate', updMusicProg);
   if(S.tab==='musica') render();
 }
 function musPlayPause(){
@@ -945,19 +968,92 @@ function musStop(){
   S.musicaAtual=null;S.musicaPlaying=false;
   if(S.tab==='musica') render();
 }
-function musProxima(){
-  if(!S.musicaAtual||!S.musicaList.length) return;
-  const idx=S.musicaList.findIndex(m=>m.id===S.musicaAtual.id);
-  const next=S.musicaList[(idx+1)%S.musicaList.length];
-  musPlay(next.id);
+function musMudarModo(){
+  const ordem = ['todas', 'uma', 'aleatorio'];
+  S.musicaModo = ordem[(ordem.indexOf(S.musicaModo || 'todas') + 1) % 3];
+  
+  // Limpa a fila para garantir um novo sorteio completo
+  if (S.musicaModo === 'aleatorio') {
+    S.musicaFilaAleatoria = []; 
+  }
+  
+  if(S.tab === 'musica') render();
+}
+
+// Passamos 'auto' para saber se foi o sistema que pulou (fim da música) ou o usuário
+function musProxima(auto = false){
+  if(!S.musicaAtual || !S.musicaList.length) return;
+  
+  if (auto && S.musicaModo === 'uma') {
+    S.musicaAudio.currentTime = 0;
+    S.musicaAudio.play().catch(()=>{});
+    return;
+  }
+  
+  if (S.musicaModo === 'aleatorio') {
+    if (S.musicaList.length <= 1) {
+      musPlay(S.musicaAtual.id, true);
+      return;
+    }
+    
+    // Se a fila não existir ou esvaziou, recarregamos ela com todas as músicas
+    if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
+      // Pega todos os IDs, mas remove a música atual para não repetir na virada
+      S.musicaFilaAleatoria = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
+    }
+    
+    // Sorteia uma música aleatória das que SOBRARAM na fila
+    const randomIndex = Math.floor(Math.random() * S.musicaFilaAleatoria.length);
+    const nextId = S.musicaFilaAleatoria[randomIndex];
+    
+    // Remove a música sorteada da fila para não tocar de novo neste ciclo
+    S.musicaFilaAleatoria.splice(randomIndex, 1);
+    
+    musPlay(nextId, true);
+    return;
+  }
+  
+  // Modo Normal
+  const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
+  const next = S.musicaList[(idx + 1) % S.musicaList.length];
+  musPlay(next.id, true);
 }
 function musAnterior(){
-  if(!S.musicaAtual||!S.musicaList.length) return;
-  const idx=S.musicaList.findIndex(m=>m.id===S.musicaAtual.id);
-  const prev=S.musicaList[(idx-1+S.musicaList.length)%S.musicaList.length];
-  musPlay(prev.id);
+  if(!S.musicaAtual || !S.musicaList.length) return;
+
+  if (S.musicaAudio && S.musicaAudio.currentTime > 3) {
+     S.musicaAudio.currentTime = 0;
+     return;
+  }
+
+  if (S.musicaModo === 'aleatorio') {
+    if (S.musicaList.length <= 1) {
+      musPlay(S.musicaAtual.id, true);
+      return;
+    }
+    
+    // Funciona com a mesma lógica da próxima, mas pega da fila para não repetir
+    if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
+      S.musicaFilaAleatoria = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
+    }
+    
+    const randomIndex = Math.floor(Math.random() * S.musicaFilaAleatoria.length);
+    const prevId = S.musicaFilaAleatoria[randomIndex];
+    S.musicaFilaAleatoria.splice(randomIndex, 1);
+    
+    musPlay(prevId, true);
+    return;
+  }
+
+  // Modo Normal
+  const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
+  const prev = S.musicaList[(idx - 1 + S.musicaList.length) % S.musicaList.length];
+  musPlay(prev.id, true);
 }
-function musVol(v){if(S.musicaAudio) S.musicaAudio.volume=parseFloat(v);}
+function musVol(v){
+  S.musicaVolume = parseFloat(v); // Salva o volume na nossa memória global
+  if(S.musicaAudio) S.musicaAudio.volume = S.musicaVolume; // Aplica na música atual
+}
 function musScrub(v){if(S.musicaAudio&&S.musicaAudio.duration) S.musicaAudio.currentTime=v/100*S.musicaAudio.duration;}
 function updMusicProg(){
   const el=document.getElementById('musProgBar');
@@ -1161,14 +1257,18 @@ async function registrarSessao(){
   beep();alert(`✅ Treino registrado!\n${feitas} séries em ${concl} exercícios.\nBom descanso! 💪`);render();
 }
 
-function setDia(d){S.diaAtivo=d;}
-
+function setDia(d){
+  S.diaAtivo = d;         // Atualiza o dia selecionado
+  S.expandido.clear();    // Fecha qualquer exercício que estivesse aberto no dia anterior
+  if(S.tab === 'hoje') render(); // Avisa a tela para se desenhar de novo!
+}
 // ══════════════════════════════════════
 // BIBLIOTECA
 // ══════════════════════════════════════
 async function buildBiblioteca(){
   const todos=await dbAll('biblioteca');
   const grupos=['todos',...new Set(todos.map(b=>b.grupMuscular).filter(Boolean))];
+  
   let lista=todos;
   if(S.bibFiltro!=='todos') lista=lista.filter(b=>b.grupMuscular===S.bibFiltro);
   if(S.bibBusca.trim()){
@@ -1178,28 +1278,26 @@ async function buildBiblioteca(){
       normalizar(b.grupMuscular || "").includes(buscaNormalizada)
     );
   }
+  
   const gruposH=grupos.map(g=>`<div class="chip${S.bibFiltro===g?' on':''}" onclick="bibFiltro('${g}')">${g==='todos'?'Todos':g}</div>`).join('');
-  const listaH=lista.length===0
-    ?`<div class="empty" style="padding:32px">${todos.length===0?`<div class="empty-icon">📚</div><div class="empty-txt">Biblioteca vazia</div><div class="empty-hint">Crie exercícios e salve-os na biblioteca</div>`:`<div class="empty-icon">🔍</div><div class="empty-txt">Sem resultados</div>`}</div>`
-    :lista.map(b=>{
-      const totalS=(b.series||[]).length;
-      const repsEx=totalS>0?`${totalS}x${b.series[0].reps||'?'} reps${b.series[0].peso?' · '+b.series[0].peso+'kg':''}`:'-';
-      let tH=`<div class="bib-thumb">💪</div>`;
-      if(b.gif) tH=`<div class="bib-thumb"><img src="${b.gif}"></div>`;
-      else if(b.foto) tH=`<div class="bib-thumb"><img src="${b.foto}"></div>`;
-      return`<div class="bib-card" onclick="bibVer(${b.id})">
-        ${tH}
-        <div class="bib-info"><div class="bib-nome">${b.nome}</div><div class="bib-meta">${b.grupMuscular||'Geral'} · ${repsEx}</div></div>
-        <div class="bib-actions">
-          <button class="bib-add" onclick="event.stopPropagation();bibAddAoDia(${b.id})">+ Dia</button>
-          <div style="display:flex;gap:4px;margin-top:3px">
-            <button style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibEditar(${b.id})">✏️</button>
-            <button style="background:none;border:none;color:rgba(255,80,80,.4);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibDeletar(${b.id})">🗑️</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  return`<div class="card">
+  
+  // Lógica de Paginação na primeira carga
+  if (!S.bibLimite) S.bibLimite = 5;
+  const total = lista.length;
+  const mostrarLista = lista.slice(0, S.bibLimite); // Pega só os primeiros 20
+
+  const listaH = mostrarLista.length === 0
+    ? `<div class="empty" style="padding:32px">${todos.length===0?`<div class="empty-icon">📚</div><div class="empty-txt">Biblioteca vazia</div><div class="empty-hint">Crie exercícios e salve-os na biblioteca</div>`:`<div class="empty-icon">🔍</div><div class="empty-txt">Sem resultados</div>`}</div>`
+    : mostrarLista.map(b => buildBibCard(b)).join('');
+
+  // Se tiver mais exercícios que o limite, cria o botão "Mostrar Mais"
+  const btnCarregarMais = total > S.bibLimite 
+    ? `<div id="bibLoadMoreCont" style="padding:16px; text-align:center;">
+         <button class="btn secondary" style="margin:0 auto; width:auto; border-radius:20px" onclick="carregarMaisBib()">⬇️ Mostrar mais (${total - S.bibLimite})</button>
+       </div>`
+    : '';
+
+  return `<div class="card">
     <div class="card-head">
       <div class="card-title">📚 Biblioteca</div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -1209,7 +1307,8 @@ async function buildBiblioteca(){
     </div>
     <div class="bib-search"><input type="text" class="inp" placeholder="🔍 Buscar..." value="${S.bibBusca}" oninput="bibBusca(this.value)"></div>
     <div class="chips">${gruposH}</div>
-    <div>${listaH}</div>
+    <div id="bibListCont">${listaH}</div>
+    ${btnCarregarMais}
   </div>
   <div class="card">
     <div class="card-head"><div class="card-title">💡 Como usar</div></div>
@@ -1219,8 +1318,62 @@ async function buildBiblioteca(){
   </div>`;
 }
 
-function bibFiltro(g){S.bibFiltro=g;render();}
-function bibBusca(v){S.bibBusca=v;clearTimeout(S._bibT);S._bibT=setTimeout(()=>render(),950);}
+function bibFiltro(g){S.bibFiltro=g; S.bibLimite=5; render();}
+function bibBusca(v){S.bibBusca=v; S.bibLimite=5; clearTimeout(S._bibT);S._bibT=setTimeout(()=>render(),950);}
+
+// Cria o visual de cada item da biblioteca com "loading=lazy"
+function buildBibCard(b) {
+  const totalS=(b.series||[]).length;
+  const repsEx=totalS>0?`${totalS}x${b.series[0].reps||'?'} reps${b.series[0].peso?' · '+b.series[0].peso+'kg':''}`:'-';
+  
+  let tH=`<div class="bib-thumb">💪</div>`;
+  if(b.gif) tH=`<div class="bib-thumb"><img src="${b.gif}" loading="lazy"></div>`;
+  else if(b.foto) tH=`<div class="bib-thumb"><img src="${b.foto}" loading="lazy"></div>`;
+  
+  return `<div class="bib-card" onclick="bibVer(${b.id})">
+    ${tH}
+    <div class="bib-info"><div class="bib-nome">${b.nome}</div><div class="bib-meta">${b.grupMuscular||'Geral'} · ${repsEx}</div></div>
+    <div class="bib-actions">
+      <button class="bib-add" onclick="event.stopPropagation();bibAddAoDia(${b.id})">+ Dia</button>
+      <div style="display:flex;gap:4px;margin-top:3px">
+        <button style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibEditar(${b.id})">✏️</button>
+        <button style="background:none;border:none;color:rgba(255,80,80,.4);font-size:12px;cursor:pointer;padding:2px" onclick="event.stopPropagation();bibDeletar(${b.id})">🗑️</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Injeta mais itens na tela sem resetar a página (para não perder o scroll)
+async function carregarMaisBib() {
+  S.bibLimite += 10; // Aumenta o limite
+  
+  // Refaz o filtro para saber quais são os próximos
+  const todos=await dbAll('biblioteca');
+  let lista=todos;
+  if(S.bibFiltro!=='todos') lista=lista.filter(b=>b.grupMuscular===S.bibFiltro);
+  if(S.bibBusca.trim()){
+    const buscaNormalizada = normalizar(S.bibBusca);
+    lista = lista.filter(b => normalizar(b.nome || "").includes(buscaNormalizada) || normalizar(b.grupMuscular || "").includes(buscaNormalizada));
+  }
+  
+  // Pega apenas a fatia nova e transforma em HTML
+  const nextBatch = lista.slice(S.bibLimite - 20, S.bibLimite);
+  const html = nextBatch.map(b => buildBibCard(b)).join('');
+  
+  // Insere no final da lista sem apagar o que já está lá
+  const cont = document.getElementById('bibListCont');
+  if (cont) cont.insertAdjacentHTML('beforeend', html);
+  
+  // Atualiza a quantidade do botão ou some com ele se acabou
+  const btnCont = document.getElementById('bibLoadMoreCont');
+  if (btnCont) {
+    if (lista.length > S.bibLimite) {
+      btnCont.innerHTML = `<button class="btn secondary" style="margin:0 auto; width:auto; border-radius:20px" onclick="carregarMaisBib()">⬇️ Mostrar mais (${lista.length - S.bibLimite})</button>`;
+    } else {
+      btnCont.remove();
+    }
+  }
+}
 
 function abrirModalBib(bib){
   document.querySelectorAll('.modal-bg').forEach(e=>e.remove());
