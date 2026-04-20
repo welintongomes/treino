@@ -947,32 +947,30 @@ function musPlay(id, force = false){
   
   S.musicaAtual = m;
 
-  // A SUA SOLUÇÃO: Destruir o player antigo completamente para não travar a memória
-  if (S.musicaAudio) {
+  // 1. SE O PLAYER NÃO EXISTE, criamos e "abençoamos" ele uma única vez
+  if (!S.musicaAudio) {
+    S.musicaAudio = document.createElement('audio');
+    S.musicaAudio.style.display = 'none';
+    document.body.appendChild(S.musicaAudio); 
+    
+    // Adiciona os ouvintes apenas uma vez
+    S.musicaAudio.addEventListener('ended', () => musProxima(true));
+    S.musicaAudio.addEventListener('timeupdate', updMusicProg);
+    S.musicaAudio.addEventListener('error', () => {
+      setTimeout(() => musProxima(true), 1000);
+    });
+  } else {
+    // 2. SE JÁ EXISTE, fazemos uma limpeza profunda sem destruir o elemento
     S.musicaAudio.pause();
-    S.musicaAudio.removeAttribute('src'); // Corta a ligação com o arquivo gigante
-    S.musicaAudio.load();
-    S.musicaAudio.remove(); // Arranca do HTML
-    S.musicaAudio = null;
+    S.musicaAudio.removeAttribute('src'); // Arranca a música antiga
+    S.musicaAudio.load(); // Força o navegador a cuspir a memória travada
   }
 
-  // Cria um player novinho em folha e gruda no HTML (Renovação)
-  S.musicaAudio = document.createElement('audio');
-  S.musicaAudio.style.display = 'none';
-  document.body.appendChild(S.musicaAudio); 
-  
-  // Adiciona os ouvintes no player novo
-  S.musicaAudio.addEventListener('ended', () => musProxima(true));
-  S.musicaAudio.addEventListener('timeupdate', updMusicProg);
-  S.musicaAudio.addEventListener('error', () => {
-    setTimeout(() => musProxima(true), 1000);
-  });
-
-  // Aplica a música e o volume
+  // 3. Coloca a música nova no MESMO player que o Android já confia
   S.musicaAudio.src = m.arquivo;
   S.musicaAudio.volume = S.musicaVolume;
   
-  // Toca a música e avisa o Android
+  // Toca a música e informa o status ao sistema
   const playPromise = S.musicaAudio.play();
   if (playPromise !== undefined) {
     playPromise.then(() => {
@@ -988,7 +986,7 @@ function musPlay(id, force = false){
     navigator.mediaSession.metadata = new MediaMetadata({
       title: m.nome,
       artist: 'GymLog Pro',
-      album: 'Treino Automático'
+      album: 'Treino'
     });
     
     navigator.mediaSession.setActionHandler('play', musPlayPause);
@@ -1018,13 +1016,11 @@ function musPlayPause(){
 }
 
 function musStop(){
-  // Limpeza completa quando o usuário aperta Stop
+  // Limpa tudo, mas NÃO remove o S.musicaAudio do HTML
   if(S.musicaAudio){
     S.musicaAudio.pause();
     S.musicaAudio.removeAttribute('src');
     S.musicaAudio.load();
-    S.musicaAudio.remove(); 
-    S.musicaAudio = null;
   }
   S.musicaAtual = null; 
   S.musicaPlaying = false;
