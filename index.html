@@ -77,18 +77,18 @@ html,body{ scrollbar-color: #ff7733 transparent; height:100%;overflow:hidden;bac
 .ex{background:var(--bg4);border-radius:var(--r2);overflow:hidden;border:1px solid var(--border);margin-bottom:8px;transition:border-color .2s}
 .ex.ok{border-color:rgba(61,204,100,.3);background:rgba(61,204,100,.03)}
 .ex.open{border-color:rgba(255,85,0,.3)}
-.ex-head{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+.ex-head{display:flex;align-items:center;gap:10px;padding: 8px 7px 0px 9px;cursor:pointer}
 .ex-thumb{width:50px;height:50px;border-radius:9px;flex-shrink:0;border:2px solid var(--border2);
   background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
 .ex-thumb img{width:100%;height:100%;object-fit:cover}
 .ex-info{flex:1;min-width:0}
 .ex-nome{font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ex-meta{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:2px}
-.ex-right{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ex-right{display:flex;flex-direction:row-reverse;align-items:center;gap:8px}
 .ex-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--border2);background:transparent;
   display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .2s;flex-shrink:0}
 .ex-check.done{background:var(--green);border-color:var(--green);color:white}
-.ex-btns-mini{display:flex;gap:3px;margin-top:3px}
+.ex-btns-mini{display:flex;gap:11px;margin-top:3px}
 .ex-btn-tiny{background:none;border:none;cursor:pointer;font-size:13px;padding:2px;opacity:.35;transition:opacity .15s}
 .ex-btn-tiny:hover{opacity:.7}
 .ex-chevron{font-size:9px;color:var(--text3);width:18px;height:18px;border-radius:50%;border:1px solid var(--border);
@@ -96,7 +96,7 @@ html,body{ scrollbar-color: #ff7733 transparent; height:100%;overflow:hidden;bac
 .ex-chevron.open{color:var(--accent);border-color:rgba(255,85,0,.4);background:rgba(255,85,0,.08)}
 
 /* Mini séries */
-.mini-series{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 10px}
+.mini-series{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 10px}
 .ms{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:8px;
   background:var(--bg5);border:1.5px solid var(--border);cursor:pointer;transition:all .12s;user-select:none}
 .ms:active{transform:scale(.94)}
@@ -729,20 +729,37 @@ function buildExCard(ex){
         ${midBadges?`<div style="display:flex;gap:3px;margin-top:3px;flex-wrap:wrap">${midBadges}</div>`:''}
       </div>
       <div class="ex-right" onclick="event.stopPropagation()">
+        ${chevron}
         <div class="ex-check${ok?' done':''}">${ok?'✓':''}</div>
         <div class="ex-btns-mini">
           <button class="ex-btn-tiny" onclick="editarEx(${ex.id})">✏️</button>
           <button class="ex-btn-tiny" onclick="deletarEx(${ex.id})">🗑️</button>
         </div>
-        ${chevron}
+        
       </div>
     </div>
-    <button class="ex-btn-tiny btn-play-mini" onclick="togglePlayHoje(event)" style="font-size:24px;padding: 1px 47px 0px 12px; opacity:1; color:#ff5500;">
-            ${S.musicaPlaying ? '⏸️' : '▶️'}
-          </button>
+    <div style="display: flex; gap: 18px; padding: 0px 12px 6px; align-items: center; border-bottom: 1px solid var(--border);">
+      
+      <button class="ex-btn-tiny" onclick="prevPlayHoje(event)" style="font-size:20px; opacity:1; color:var(--text2);">
+        ⏮️
+      </button>
+      
+      <button class="ex-btn-tiny btn-play-mini" onclick="togglePlayHoje(event)" style="font-size:24px; opacity:1; color:#ff5500;">
+        ${S.musicaPlaying ? '⏸️' : '▶️'}
+      </button>
+      
+      <button class="ex-btn-tiny" onclick="nextPlayHoje(event)" style="font-size:20px; opacity:1; color:var(--text2);">
+        ⏭️
+      </button>
+      
+    </div>
+    
     ${!exp&&totalS>0?`<div class="mini-series">${miniS}</div>`:''}
+    
     ${corpoHtml}
+    
   </div>`;
+  
 }
 
 async function toggleEx(id){
@@ -1131,6 +1148,34 @@ function togglePlayHoje(event) {
   document.querySelectorAll('.btn-play-mini').forEach(btn => {
       btn.textContent = S.musicaPlaying ? '⏸️' : '▶️';
   });
+}
+
+// Pula para a próxima música pelo mini-player
+function nextPlayHoje(event) {
+  if(event) event.stopPropagation();
+  if (!S.musicaAtual && S.musicaList && S.musicaList.length > 0) {
+      musPlay(S.musicaList[0].id); 
+  } else if (S.musicaAtual) {
+      musProxima();
+  }
+  // Atualiza os ícones na tela
+  setTimeout(() => {
+      document.querySelectorAll('.btn-play-mini').forEach(btn => btn.textContent = S.musicaPlaying ? '⏸️' : '▶️');
+  }, 100);
+}
+
+// Volta a música pelo mini-player
+function prevPlayHoje(event) {
+  if(event) event.stopPropagation();
+  if (!S.musicaAtual && S.musicaList && S.musicaList.length > 0) {
+      musPlay(S.musicaList[0].id); 
+  } else if (S.musicaAtual) {
+      musAnterior();
+  }
+  // Atualiza os ícones na tela
+  setTimeout(() => {
+      document.querySelectorAll('.btn-play-mini').forEach(btn => btn.textContent = S.musicaPlaying ? '⏸️' : '▶️');
+  }, 100);
 }
 
 function musProxima(){
