@@ -936,97 +936,154 @@ async function buildMusica(){
 // música global (não para quando muda de aba)
 // Adicionamos um parâmetro "force" para obrigar a reiniciar a música quando necessário
 
-function musPlay(id, force = false){
+// ══════════════════════════════════════
+// FUNÇÕES DE ÁUDIO (BLINDADAS PARA BACKGROUND)
+// ══════════════════════════════════════
+
+// 1. Otimizador Nativo: Converte texto pesado em arquivo virtual leve silenciosamente
+async function prepararBlob(id) {
+  if (!S.musicaBlobCache) S.musicaBlobCache = {};
+  if (S.musicaBlobCache[id]) return S.musicaBlobCache[id];
+  
+  const m = S.musicaList.find(x => x.id === id);
+  if (!m) return null;
+  
+  try {
+    // Usa o motor nativo do navegador para não engasgar o processador
+    const res = await fetch(m.arquivo); 
+    const blob = await res.blob();
+    S.musicaBlobCache[id] = URL.createObjectURL(blob);
+    return S.musicaBlobCache[id];
+  } catch(e) { 
+    return m.arquivo; 
+  }
+}
+
+// 2. A Premonição: Sabe qual é a próxima música para deixá-la no gatilho
+function definirProximaNaFila() {
+  if(!S.musicaAtual || !S.musicaList.length) return null;
+  if (S.musicaModo === 'uma') return S.musicaAtual.id;
+  
+  if (S.musicaModo === 'aleatorio') {
+    if (S.musicaList.length <= 1) return S.musicaAtual.id;
+    if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
+       // Mistura a fila e deixa a primeira guardada
+       let ids = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
+       ids.sort(() => Math.random() - 0.5); // Embaralha
+       S.musicaFilaAleatoria = ids;
+    }
+    return S.musicaFilaAleatoria[0];
+  }
+  const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
+  return S.musicaList[(idx + 1) % S.musicaList.length].id;
+}
+
+// 3. Wrapper Async: Aquele que o usuário clica com o dedo na tela
+async function musPlay(id, force = false) {
+   if(S.musicaAudio && S.musicaAtual?.id === id && !force) {
+     musPlayPause(); 
+     return;
+   }
+   // Aguarda a conversão apenas se o usuário tiver clicado agora
+   await prepararBlob(id); 
+   musPlaySincrono(id, force);
+}
+
+// 4. O Player Autônomo (Invulnerável ao bloqueio de tela)
+function musPlaySincrono(id, force = false){
   const m = S.musicaList.find(x => x.id === id);
   if(!m) return;
-  
-  if(S.musicaAudio && S.musicaAtual?.id === id && !force){
-    musPlayPause();
-    return;
-  }
-  
   S.musicaAtual = m;
 
-  // 1. A MÁGICA: Em vez de destruir e recriar, nós reaproveitamos o player!
   if (!S.musicaAudio) {
     S.musicaAudio = new Audio();
-    // Só adicionamos os ouvintes de evento UMA vez na vida
+    // A mágica acontece aqui: A transição SÍNCRONA
     S.musicaAudio.addEventListener('ended', () => musProxima(true));
     S.musicaAudio.addEventListener('timeupdate', updMusicProg);
+    S.musicaAudio.addEventListener('error', () => setTimeout(() => musProxima(true), 1000));
   }
 
-  // Apenas trocamos o arquivo (src) e o volume do player já existente
-  S.musicaAudio.src = m.arquivo;
-  S.musicaAudio.volume = S.musicaVolume;
-  
-  // Toca a música
-  S.musicaAudio.play().catch(()=>{});
-  S.musicaPlaying = true;
-  
-  // 2. BÔNUS: Media Session API (Controles na tela de bloqueio do celular)
+  // Notificação da Tela de Bloqueio
   if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: m.nome,
-      artist: 'GymLog Pro',
-      album: 'Treino' // Você pode até colocar o nome do grupo muscular aqui se quiser depois!
-    });
-    
-    // Conecta os botões da tela de bloqueio às suas funções
+    navigator.mediaSession.metadata = new MediaMetadata({ title: m.nome, artist: 'GymLog Pro', album: 'Treino' });
     navigator.mediaSession.setActionHandler('play', musPlayPause);
     navigator.mediaSession.setActionHandler('pause', musPlayPause);
     navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
-    navigator.mediaSession.setActionHandler('nexttrack', musProxima);
+    navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
   }
+
+  // O SEGREDO: Puxa o arquivo já preparado da RAM (leva 1 milissegundo!)
+  S.musicaAudio.src = (S.musicaBlobCache && S.musicaBlobCache[id]) ? S.musicaBlobCache[id] : m.arquivo;
+  S.musicaAudio.volume = S.musicaVolume;
+  
+  const playPromise = S.musicaAudio.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      S.musicaPlaying = true;
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    }).catch(()=>{ S.musicaPlaying = false; });
+  } else { S.musicaPlaying = true; }
+
+  // FAXINA: Apaga a música ANTERIOR da memória para o celular não travar
+  if (S.musicaBlobCache) {
+    for (let k in S.musicaBlobCache) {
+      if (k != id && S.musicaBlobCache[k]) {
+         URL.revokeObjectURL(S.musicaBlobCache[k]);
+         delete S.musicaBlobCache[k];
+      }
+    }
+  }
+
+  // O GATILHO: Descobre a PRÓXIMA e manda converter em silêncio no fundo!
+  const idProxima = definirProximaNaFila();
+  if (idProxima) prepararBlob(idProxima);
 
   if(S.tab === 'musica') render();
 }
 
 function musPlayPause(){
   if(!S.musicaAudio) return;
-  
   if(S.musicaPlaying){
     S.musicaAudio.pause();
     S.musicaPlaying = false;
-    // Avisa o Android que pausou
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   } else {
     S.musicaAudio.play().catch(()=>{});
     S.musicaPlaying = true;
-    // Avisa o Android que voltou a tocar
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   }
   if(S.tab === 'musica') render();
 }
 
 function musStop(){
-  if(S.musicaAudio){
-    S.musicaAudio.pause();
-    S.musicaAudio.src = ''; // Limpa a fonte do áudio
-  }
+  if(S.musicaAudio) S.musicaAudio.pause();
   S.musicaAtual = null; 
   S.musicaPlaying = false;
   
-  // Remove os controles da tela de bloqueio
+  if (S.musicaBlobCache) {
+     for (let k in S.musicaBlobCache) URL.revokeObjectURL(S.musicaBlobCache[k]);
+     S.musicaBlobCache = {};
+  }
   if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
   }
-  
   if(S.tab === 'musica') render();
 }
 
 function musMudarModo(){
   const ordem = ['todas', 'uma', 'aleatorio'];
   S.musicaModo = ordem[(ordem.indexOf(S.musicaModo || 'todas') + 1) % 3];
+  if (S.musicaModo === 'aleatorio') S.musicaFilaAleatoria = []; 
   
-  // Limpa a fila para garantir um novo sorteio completo
-  if (S.musicaModo === 'aleatorio') {
-    S.musicaFilaAleatoria = []; 
+  // Ao mudar de modo, o gatilho muda! Atualizamos a música de fundo:
+  if (S.musicaPlaying) {
+      const idProxima = definirProximaNaFila();
+      if (idProxima) prepararBlob(idProxima);
   }
-  
   if(S.tab === 'musica') render();
 }
 
-// Passamos 'auto' para saber se foi o sistema que pulou (fim da música) ou o usuário
 function musProxima(auto = false){
   if(!S.musicaAtual || !S.musicaList.length) return;
   
@@ -1036,66 +1093,49 @@ function musProxima(auto = false){
     return;
   }
   
+  let nextId;
   if (S.musicaModo === 'aleatorio') {
-    if (S.musicaList.length <= 1) {
-      musPlay(S.musicaAtual.id, true);
-      return;
+    if (S.musicaList.length <= 1) nextId = S.musicaAtual.id;
+    else {
+        if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
+            let ids = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
+            ids.sort(() => Math.random() - 0.5);
+            S.musicaFilaAleatoria = ids;
+        }
+        nextId = S.musicaFilaAleatoria.shift(); 
     }
-    
-    // Se a fila não existir ou esvaziou, recarregamos ela com todas as músicas
-    if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
-      // Pega todos os IDs, mas remove a música atual para não repetir na virada
-      S.musicaFilaAleatoria = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
-    }
-    
-    // Sorteia uma música aleatória das que SOBRARAM na fila
-    const randomIndex = Math.floor(Math.random() * S.musicaFilaAleatoria.length);
-    const nextId = S.musicaFilaAleatoria[randomIndex];
-    
-    // Remove a música sorteada da fila para não tocar de novo neste ciclo
-    S.musicaFilaAleatoria.splice(randomIndex, 1);
-    
-    musPlay(nextId, true);
-    return;
+  } else {
+    const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
+    nextId = S.musicaList[(idx + 1) % S.musicaList.length].id;
   }
-  
-  // Modo Normal
-  const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
-  const next = S.musicaList[(idx + 1) % S.musicaList.length];
-  musPlay(next.id, true);
+
+  // A DIVISÃO: Se o sistema chamou (background), toca IMEDIATAMENTE.
+  // Se o usuário tocou na tela (auto=false), permite preparar na hora.
+  if (auto) musPlaySincrono(nextId, true);
+  else musPlay(nextId, true); 
 }
+
 function musAnterior(){
   if(!S.musicaAtual || !S.musicaList.length) return;
-
   if (S.musicaAudio && S.musicaAudio.currentTime > 3) {
      S.musicaAudio.currentTime = 0;
      return;
   }
-
+  
+  let prevId;
   if (S.musicaModo === 'aleatorio') {
-    if (S.musicaList.length <= 1) {
-      musPlay(S.musicaAtual.id, true);
-      return;
+    if (S.musicaList.length <= 1) prevId = S.musicaAtual.id;
+    else {
+       let ids = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
+       prevId = ids[Math.floor(Math.random() * ids.length)];
     }
-    
-    // Funciona com a mesma lógica da próxima, mas pega da fila para não repetir
-    if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
-      S.musicaFilaAleatoria = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
-    }
-    
-    const randomIndex = Math.floor(Math.random() * S.musicaFilaAleatoria.length);
-    const prevId = S.musicaFilaAleatoria[randomIndex];
-    S.musicaFilaAleatoria.splice(randomIndex, 1);
-    
-    musPlay(prevId, true);
-    return;
+  } else {
+    const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
+    prevId = S.musicaList[(idx - 1 + S.musicaList.length) % S.musicaList.length].id;
   }
-
-  // Modo Normal
-  const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
-  const prev = S.musicaList[(idx - 1 + S.musicaList.length) % S.musicaList.length];
-  musPlay(prev.id, true);
+  musPlay(prevId, true);
 }
+
 function musVol(v){
   S.musicaVolume = parseFloat(v); // Salva o volume na nossa memória global
   if(S.musicaAudio) S.musicaAudio.volume = S.musicaVolume; // Aplica na música atual
