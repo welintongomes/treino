@@ -737,6 +737,9 @@ function buildExCard(ex){
         ${chevron}
       </div>
     </div>
+    <button class="ex-btn-tiny btn-play-mini" onclick="togglePlayHoje(event)" style="font-size:24px;padding: 1px 47px 0px 12px; opacity:1; color:#ff5500;">
+            ${S.musicaPlaying ? '⏸️' : '▶️'}
+          </button>
     ${!exp&&totalS>0?`<div class="mini-series">${miniS}</div>`:''}
     ${corpoHtml}
   </div>`;
@@ -1105,6 +1108,29 @@ function musPlayPause(){
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   }
   if(S.tab === 'musica' && document.visibilityState === 'visible') render();
+}
+
+// Função exclusiva para o botão Play/Pause na tela de Treino
+function togglePlayHoje(event) {
+  // Impede que o clique no botão abra/feche os detalhes do exercício
+  if(event) event.stopPropagation(); 
+
+  // Se não tem música tocando, avisa o usuário
+  if (!S.musicaAtual && S.musicaList && S.musicaList.length > 0) {
+      // Opcional: Já dá play na primeira música se ele clicar sem ter escolhido
+      musPlay(S.musicaList[0].id); 
+  } else if (!S.musicaAtual) {
+      alert('Nenhuma música importada! Vá na aba Música primeiro.');
+      return;
+  } else {
+      // Chama a sua função original que já funciona perfeitamente
+      musPlayPause(); 
+  }
+
+  // A Mágica: Atualiza o ícone de TODOS os botões da tela na mesma hora
+  document.querySelectorAll('.btn-play-mini').forEach(btn => {
+      btn.textContent = S.musicaPlaying ? '⏸️' : '▶️';
+  });
 }
 
 function musProxima(){
