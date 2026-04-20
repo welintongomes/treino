@@ -936,26 +936,48 @@ async function buildMusica(){
 // música global (não para quando muda de aba)
 // Adicionamos um parâmetro "force" para obrigar a reiniciar a música quando necessário
 function musPlay(id, force = false){
-  const m=S.musicaList.find(x=>x.id===id);
+  const m = S.musicaList.find(x => x.id === id);
   if(!m) return;
   
-  // Se não estiver forçando o reinício, funciona como Play/Pause normal da lista
-  if(S.musicaAudio && S.musicaAtual?.id===id && !force){
+  if(S.musicaAudio && S.musicaAtual?.id === id && !force){
     musPlayPause();
     return;
   }
   
-  if(S.musicaAudio){S.musicaAudio.pause();S.musicaAudio=null;}
-  S.musicaAtual=m;
-  S.musicaAudio=new Audio(m.arquivo);
-  S.musicaAudio.volume = S.musicaVolume; // Usa o volume que está salvo na memória
-  S.musicaAudio.play().catch(()=>{});
-  S.musicaPlaying=true;
+  S.musicaAtual = m;
+
+  // 1. A MÁGICA: Em vez de destruir e recriar, nós reaproveitamos o player!
+  if (!S.musicaAudio) {
+    S.musicaAudio = new Audio();
+    // Só adicionamos os ouvintes de evento UMA vez na vida
+    S.musicaAudio.addEventListener('ended', () => musProxima(true));
+    S.musicaAudio.addEventListener('timeupdate', updMusicProg);
+  }
+
+  // Apenas trocamos o arquivo (src) e o volume do player já existente
+  S.musicaAudio.src = m.arquivo;
+  S.musicaAudio.volume = S.musicaVolume;
   
-  // Quando a música acaba sozinha, avisa a função que foi automático
-  S.musicaAudio.addEventListener('ended', () => musProxima(true));
-  S.musicaAudio.addEventListener('timeupdate', updMusicProg);
-  if(S.tab==='musica') render();
+  // Toca a música
+  S.musicaAudio.play().catch(()=>{});
+  S.musicaPlaying = true;
+  
+  // 2. BÔNUS: Media Session API (Controles na tela de bloqueio do celular)
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: m.nome,
+      artist: 'GymLog Pro',
+      album: 'Treino' // Você pode até colocar o nome do grupo muscular aqui se quiser depois!
+    });
+    
+    // Conecta os botões da tela de bloqueio às suas funções
+    navigator.mediaSession.setActionHandler('play', musPlayPause);
+    navigator.mediaSession.setActionHandler('pause', musPlayPause);
+    navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
+    navigator.mediaSession.setActionHandler('nexttrack', musProxima);
+  }
+
+  if(S.tab === 'musica') render();
 }
 function musPlayPause(){
   if(!S.musicaAudio) return;
@@ -964,9 +986,19 @@ function musPlayPause(){
   if(S.tab==='musica') render();
 }
 function musStop(){
-  if(S.musicaAudio){S.musicaAudio.pause();S.musicaAudio=null;}
-  S.musicaAtual=null;S.musicaPlaying=false;
-  if(S.tab==='musica') render();
+  if(S.musicaAudio){
+    S.musicaAudio.pause();
+    S.musicaAudio.src = ''; // Limpa a fonte do áudio
+  }
+  S.musicaAtual = null; 
+  S.musicaPlaying = false;
+  
+  // Remove os controles da tela de bloqueio
+  if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+  }
+  
+  if(S.tab === 'musica') render();
 }
 function musMudarModo(){
   const ordem = ['todas', 'uma', 'aleatorio'];
