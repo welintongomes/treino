@@ -882,7 +882,7 @@ async function buildHistorico(){
 }
 
 // ══════════════════════════════════════
-// MÚSICA
+// MÚSICA - ARQUITETURA PING-PONG (DUAL PLAYER)
 // ══════════════════════════════════════
 async function buildMusica(){
   const lista=await dbAll('musicas');
@@ -896,8 +896,7 @@ async function buildMusica(){
         <div style="font-size:10px;color:var(--text3);margin-top:2px">Reproduzindo agora</div>
       </div>
     </div>
-    
-<div class="now-play-controls">
+    <div class="now-play-controls">
       <button class="side-btn" onclick="musMudarModo()" style="font-size:18px">${iconesModo[S.musicaModo || 'todas']}</button>
       <button class="side-btn" onclick="musAnterior()">⏮</button>
       <button class="main-btn" onclick="musPlayPause()">${S.musicaPlaying?'⏸':'▶'}</button>
@@ -939,197 +938,186 @@ async function buildMusica(){
     </div>
   </div>`;
 }
+// 1. INICIALIZAÇÃO DOS DOIS MOTORES
+function initPlayers() {
+  if (S.playerA) return;
+  S.playerA = new Audio();
+  S.playerB = new Audio();
+  S.playerAtivo = S.playerA;
 
-// música global (não para quando muda de aba)
-// Adicionamos um parâmetro "force" para obrigar a reiniciar a música quando necessário
+  const setup = (p) => {
+    p.addEventListener('ended', () => {
+       // Se for repetir a mesma, só volta o tempo do player atual
+       if (S.musicaModo === 'uma') {
+          p.currentTime = 0;
+          p.play().catch(()=>{});
+          return;
+       }
 
-// ══════════════════════════════════════
-// FUNÇÕES DE ÁUDIO (BLINDADAS PARA BACKGROUND)
-// ══════════════════════════════════════
+       // PING-PONG! Troca para o player reserva que JÁ ESTÁ CARREGADO
+       S.playerAtivo = (p === S.playerA) ? S.playerB : S.playerA;
+       S.playerAtivo.volume = S.musicaVolume;
+       S.playerAtivo.play().catch(()=>{});
+       S.musicaPlaying = true;
 
-// 1. Otimizador Nativo: Converte texto pesado em arquivo virtual leve silenciosamente
-async function prepararBlob(id) {
-  if (!S.musicaBlobCache) S.musicaBlobCache = {};
-  if (S.musicaBlobCache[id]) return S.musicaBlobCache[id];
+       // Atualiza a tela de bloqueio com a nova música que começou
+       S.musicaAtual = S.proximaMusica;
+       atualizarMediaSession(S.musicaAtual);
+
+       // Remove a música tocada da fila aleatória (se for o caso)
+       if (S.musicaModo === 'aleatorio' && S.musicaFilaAleatoria && S.musicaFilaAleatoria[0] === S.musicaAtual.id) {
+           S.musicaFilaAleatoria.shift();
+       }
+
+       // Manda engatilhar a música do futuro no player que acabou de desligar!
+       prepararProximaNoFundo();
+
+       if(S.tab === 'musica' && document.visibilityState === 'visible') render();
+    });
+    p.addEventListener('timeupdate', updMusicProg);
+  };
   
-  const m = S.musicaList.find(x => x.id === id);
-  if (!m) return null;
-  
-  try {
-    // Usa o motor nativo do navegador para não engasgar o processador
-    const res = await fetch(m.arquivo); 
-    const blob = await res.blob();
-    S.musicaBlobCache[id] = URL.createObjectURL(blob);
-    return S.musicaBlobCache[id];
-  } catch(e) { 
-    return m.arquivo; 
+  setup(S.playerA);
+  setup(S.playerB);
+}
+
+function atualizarMediaSession(m) {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({ title: m.nome, artist: 'GymLog Pro', album: 'Treino' });
+    navigator.mediaSession.setActionHandler('play', musPlayPause);
+    navigator.mediaSession.setActionHandler('pause', musPlayPause);
+    navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
+    navigator.mediaSession.setActionHandler('nexttrack', musProxima);
   }
 }
 
-// 2. A Premonição: Sabe qual é a próxima música para deixá-la no gatilho
+// 2. CONVERSOR VIRTUAL E FAXINA DE MEMÓRIA RAM
+async function prepararBlob(id) {
+  if (!S.musicaBlobCache) S.musicaBlobCache = {};
+  if (S.musicaBlobCache[id]) return S.musicaBlobCache[id];
+
+  const m = S.musicaList.find(x => x.id === id);
+  if (!m) return null;
+
+  try {
+    const res = await fetch(m.arquivo);
+    const blob = await res.blob();
+    S.musicaBlobCache[id] = URL.createObjectURL(blob);
+    return S.musicaBlobCache[id];
+  } catch(e) { return m.arquivo; }
+}
+
+function faxinaBlobCache(atualId, proximaId) {
+   if (!S.musicaBlobCache) return;
+   for (let id in S.musicaBlobCache) {
+      if (id != atualId && id != proximaId && S.musicaBlobCache[id]) {
+         URL.revokeObjectURL(S.musicaBlobCache[id]);
+         delete S.musicaBlobCache[id];
+      }
+   }
+}
+
+// 3. INTELIGÊNCIA DA FILA
 function definirProximaNaFila() {
   if(!S.musicaAtual || !S.musicaList.length) return null;
-  if (S.musicaModo === 'uma') return S.musicaAtual.id;
-  
+  if (S.musicaList.length <= 1 || S.musicaModo === 'uma') return S.musicaAtual.id;
+
   if (S.musicaModo === 'aleatorio') {
-    if (S.musicaList.length <= 1) return S.musicaAtual.id;
     if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
-       // Mistura a fila e deixa a primeira guardada
        let ids = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
        ids.sort(() => Math.random() - 0.5); // Embaralha
        S.musicaFilaAleatoria = ids;
     }
     return S.musicaFilaAleatoria[0];
   }
+  
   const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
   return S.musicaList[(idx + 1) % S.musicaList.length].id;
 }
 
-// 3. Wrapper Async: Aquele que o usuário clica com o dedo na tela
-async function musPlay(id, force = false) {
-   if(S.musicaAudio && S.musicaAtual?.id === id && !force) {
-     musPlayPause(); 
-     return;
+// O GATILHO SILENCIOSO: Puxa a música do futuro para o player parado
+async function prepararProximaNoFundo() {
+   const nextId = definirProximaNaFila();
+   if (!nextId) return;
+
+   const m = S.musicaList.find(x => x.id === nextId);
+   S.proximaMusica = m; // Guarda para quando o Ping-Pong girar
+
+   const blobUrl = await prepararBlob(nextId);
+
+   // Carrega a música de forma invisível no player que não está tocando
+   const playerParado = (S.playerAtivo === S.playerA) ? S.playerB : S.playerA;
+   if (playerParado.src !== blobUrl) {
+       playerParado.src = blobUrl;
+       playerParado.load();
    }
-   // Aguarda a conversão apenas se o usuário tiver clicado agora
-   await prepararBlob(id); 
-   musPlaySincrono(id, force);
+
+   // Limpa a RAM apagando as músicas velhas
+   faxinaBlobCache(S.musicaAtual.id, nextId);
 }
 
-// 4. O Player Autônomo (Invulnerável ao bloqueio de tela)
-function musPlaySincrono(id, force = false){
+// 4. FUNÇÕES DE CONTROLE PRINCIPAL
+async function musPlay(id, force = false) {
+  initPlayers();
   const m = S.musicaList.find(x => x.id === id);
   if(!m) return;
+
+  // Se clicou na música que já está tocando, age como play/pause
+  if(S.playerAtivo && S.musicaAtual?.id === id && !force){
+    musPlayPause();
+    return;
+  }
+
   S.musicaAtual = m;
+  atualizarMediaSession(m);
 
-  if (!S.musicaAudio) {
-    S.musicaAudio = new Audio();
-    // A mágica acontece aqui: A transição SÍNCRONA
-    S.musicaAudio.addEventListener('ended', () => musProxima(true));
-    S.musicaAudio.addEventListener('timeupdate', updMusicProg);
-    S.musicaAudio.addEventListener('error', () => setTimeout(() => musProxima(true), 1000));
+  if (S.musicaModo === 'aleatorio' && S.musicaFilaAleatoria && S.musicaFilaAleatoria[0] === id) {
+      S.musicaFilaAleatoria.shift();
   }
 
-  // Notificação da Tela de Bloqueio
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({ title: m.nome, artist: 'GymLog Pro', album: 'Treino' });
-    navigator.mediaSession.setActionHandler('play', musPlayPause);
-    navigator.mediaSession.setActionHandler('pause', musPlayPause);
-    navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
-    navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
-  }
+  // Como é um comando do usuário, preparamos a conversão agora mesmo
+  const blobUrl = await prepararBlob(id);
 
-  // O SEGREDO: Puxa o arquivo já preparado da RAM (leva 1 milissegundo!)
-  S.musicaAudio.src = (S.musicaBlobCache && S.musicaBlobCache[id]) ? S.musicaBlobCache[id] : m.arquivo;
-  S.musicaAudio.volume = S.musicaVolume;
-  
-  const playPromise = S.musicaAudio.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      S.musicaPlaying = true;
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    }).catch(()=>{ S.musicaPlaying = false; });
-  } else { S.musicaPlaying = true; }
+  S.playerA.pause(); S.playerB.pause(); // Limpa a via
 
-  // FAXINA: Apaga a música ANTERIOR da memória para o celular não travar
-  if (S.musicaBlobCache) {
-    for (let k in S.musicaBlobCache) {
-      if (k != id && S.musicaBlobCache[k]) {
-         URL.revokeObjectURL(S.musicaBlobCache[k]);
-         delete S.musicaBlobCache[k];
-      }
-    }
-  }
+  // Usa sempre o Player A para inícios manuais novos
+  S.playerAtivo = S.playerA;
+  S.playerAtivo.src = blobUrl;
+  S.playerAtivo.volume = S.musicaVolume;
+  S.playerAtivo.play().catch(()=>{});
+  S.musicaPlaying = true;
 
-  // O GATILHO: Descobre a PRÓXIMA e manda converter em silêncio no fundo!
-  const idProxima = definirProximaNaFila();
-  if (idProxima) prepararBlob(idProxima);
+  // A música já começou, agora manda preparar o Player B no fundo
+  prepararProximaNoFundo();
 
-  // Só recria a tela se o usuário estiver ativamente olhando para ela
   if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
 function musPlayPause(){
-  if(!S.musicaAudio) return;
+  if(!S.playerAtivo) return;
   if(S.musicaPlaying){
-    S.musicaAudio.pause();
+    S.playerAtivo.pause();
     S.musicaPlaying = false;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   } else {
-    S.musicaAudio.play().catch(()=>{});
+    S.playerAtivo.play().catch(()=>{});
     S.musicaPlaying = true;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   }
-  // Só recria a tela se o usuário estiver ativamente olhando para ela
   if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
-function musStop(){
-  if(S.musicaAudio) S.musicaAudio.pause();
-  S.musicaAtual = null; 
-  S.musicaPlaying = false;
-  
-  if (S.musicaBlobCache) {
-     for (let k in S.musicaBlobCache) URL.revokeObjectURL(S.musicaBlobCache[k]);
-     S.musicaBlobCache = {};
-  }
-  if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = null;
-      navigator.mediaSession.playbackState = 'none';
-  }
-  // Só recria a tela se o usuário estiver ativamente olhando para ela
-  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
-}
-
-function musMudarModo(){
-  const ordem = ['todas', 'uma', 'aleatorio'];
-  S.musicaModo = ordem[(ordem.indexOf(S.musicaModo || 'todas') + 1) % 3];
-  if (S.musicaModo === 'aleatorio') S.musicaFilaAleatoria = []; 
-  
-  // Ao mudar de modo, o gatilho muda! Atualizamos a música de fundo:
-  if (S.musicaPlaying) {
-      const idProxima = definirProximaNaFila();
-      if (idProxima) prepararBlob(idProxima);
-  }
-  // Só recria a tela se o usuário estiver ativamente olhando para ela
-  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
-}
-
-function musProxima(auto = false){
+function musProxima(){
   if(!S.musicaAtual || !S.musicaList.length) return;
-  
-  if (auto && S.musicaModo === 'uma') {
-    S.musicaAudio.currentTime = 0;
-    S.musicaAudio.play().catch(()=>{});
-    return;
-  }
-  
-  let nextId;
-  if (S.musicaModo === 'aleatorio') {
-    if (S.musicaList.length <= 1) nextId = S.musicaAtual.id;
-    else {
-        if (!S.musicaFilaAleatoria || S.musicaFilaAleatoria.length === 0) {
-            let ids = S.musicaList.map(m => m.id).filter(id => id !== S.musicaAtual.id);
-            ids.sort(() => Math.random() - 0.5);
-            S.musicaFilaAleatoria = ids;
-        }
-        nextId = S.musicaFilaAleatoria.shift(); 
-    }
-  } else {
-    const idx = S.musicaList.findIndex(m => m.id === S.musicaAtual.id);
-    nextId = S.musicaList[(idx + 1) % S.musicaList.length].id;
-  }
-
-  // A DIVISÃO: Se o sistema chamou (background), toca IMEDIATAMENTE.
-  // Se o usuário tocou na tela (auto=false), permite preparar na hora.
-  if (auto) musPlaySincrono(nextId, true);
-  else musPlay(nextId, true); 
+  const nextId = definirProximaNaFila();
+  if (nextId) musPlay(nextId, true); // O 'true' força o play e reseta a fila
 }
 
 function musAnterior(){
   if(!S.musicaAtual || !S.musicaList.length) return;
-  if (S.musicaAudio && S.musicaAudio.currentTime > 3) {
-     S.musicaAudio.currentTime = 0;
+  
+  if (S.playerAtivo && S.playerAtivo.currentTime > 3) {
+     S.playerAtivo.currentTime = 0;
      return;
   }
   
@@ -1147,25 +1135,65 @@ function musAnterior(){
   musPlay(prevId, true);
 }
 
-function musVol(v){
-  S.musicaVolume = parseFloat(v); // Salva o volume na nossa memória global
-  if(S.musicaAudio) S.musicaAudio.volume = S.musicaVolume; // Aplica na música atual
-}
-function musScrub(v){if(S.musicaAudio&&S.musicaAudio.duration) S.musicaAudio.currentTime=v/100*S.musicaAudio.duration;}
-function updMusicProg(){
-  // A MÁGICA: Só gasta bateria desenhando a barra se o usuário estiver com a tela ligada!
-  if(document.visibilityState !== 'visible') return; 
+function musMudarModo(){
+  const ordem = ['todas', 'uma', 'aleatorio'];
+  S.musicaModo = ordem[(ordem.indexOf(S.musicaModo || 'todas') + 1) % 3];
   
-  const el=document.getElementById('musProgBar');
-  if(el&&S.musicaAudio&&S.musicaAudio.duration) el.value=S.musicaAudio.currentTime/S.musicaAudio.duration*100;
+  if (S.musicaModo === 'aleatorio') S.musicaFilaAleatoria = []; 
+  
+  // Como mudou a regra do jogo, recalcula e engatilha a música certa
+  if (S.musicaPlaying && S.musicaModo !== 'uma') {
+      prepararProximaNoFundo(); 
+  }
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
+
+function musStop(){
+  if(S.playerA) { S.playerA.pause(); S.playerA.src = ''; }
+  if(S.playerB) { S.playerB.pause(); S.playerB.src = ''; }
+  S.musicaAtual = null; 
+  S.musicaPlaying = false;
+  
+  if (S.musicaBlobCache) {
+     for (let k in S.musicaBlobCache) URL.revokeObjectURL(S.musicaBlobCache[k]);
+     S.musicaBlobCache = {};
+  }
+  
+  if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+  }
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
+}
+
+function musVol(v){
+  S.musicaVolume = parseFloat(v);
+  if(S.playerA) S.playerA.volume = S.musicaVolume;
+  if(S.playerB) S.playerB.volume = S.musicaVolume;
+}
+
+function musScrub(v){
+  if(S.playerAtivo && S.playerAtivo.duration) {
+     S.playerAtivo.currentTime = (v/100) * S.playerAtivo.duration;
+  }
+}
+
+function updMusicProg(){
+  if(document.visibilityState !== 'visible') return;
+  const el = document.getElementById('musProgBar');
+  if(el && S.playerAtivo && S.playerAtivo.duration) {
+     el.value = (S.playerAtivo.currentTime / S.playerAtivo.duration) * 100;
+  }
+}
+
 async function musDeletar(id){
   if(!confirm('Remover esta música?')) return;
-  if(S.musicaAtual?.id===id) musStop();
+  if(S.musicaAtual?.id === id) musStop();
   await dbDel('musicas',id);
-  if(S.tab==='musica') render();
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
-function toggleMusic(){setTab('musica');}
+
+function toggleMusic(){ setTab('musica'); }
 
 // ══════════════════════════════════════
 // EXPORT / IMPORT
