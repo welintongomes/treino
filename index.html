@@ -935,6 +935,7 @@ async function buildMusica(){
 
 // música global (não para quando muda de aba)
 // Adicionamos um parâmetro "force" para obrigar a reiniciar a música quando necessário
+
 function musPlay(id, force = false){
   const m = S.musicaList.find(x => x.id === id);
   if(!m) return;
@@ -946,60 +947,94 @@ function musPlay(id, force = false){
   
   S.musicaAtual = m;
 
-  // 1. A MÁGICA: Em vez de destruir e recriar, nós reaproveitamos o player!
+  // 1. TRUQUE DO DOM: Em vez de só criar na memória, anexamos ao HTML invisível
   if (!S.musicaAudio) {
-    S.musicaAudio = new Audio();
-    // Só adicionamos os ouvintes de evento UMA vez na vida
+    S.musicaAudio = document.createElement('audio');
+    S.musicaAudio.style.display = 'none';
+    document.body.appendChild(S.musicaAudio); // Previne que o Android "mate" o áudio
+    
+    // Ouvintes de evento adicionados UMA única vez
     S.musicaAudio.addEventListener('ended', () => musProxima(true));
     S.musicaAudio.addEventListener('timeupdate', updMusicProg);
+    
+    // Tratamento de erro silencioso para não quebrar a fila se uma música falhar
+    S.musicaAudio.addEventListener('error', () => {
+      setTimeout(() => musProxima(true), 1000);
+    });
   }
 
-  // Apenas trocamos o arquivo (src) e o volume do player já existente
+  // Prepara o áudio
+  S.musicaAudio.pause();
   S.musicaAudio.src = m.arquivo;
   S.musicaAudio.volume = S.musicaVolume;
   
-  // Toca a música
-  S.musicaAudio.play().catch(()=>{});
-  S.musicaPlaying = true;
+  // 2. TRUQUE DO LOAD: Força o navegador a engolir o novo arquivo antes de tocar
+  S.musicaAudio.load(); 
+
+  // Toca a música e informa o status ao sistema
+  const playPromise = S.musicaAudio.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      S.musicaPlaying = true;
+      // 3. TRUQUE DO STATUS: Força o Android a manter a notificação na tela de bloqueio
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    }).catch(()=>{ S.musicaPlaying = false; });
+  } else {
+    S.musicaPlaying = true;
+  }
   
-  // 2. BÔNUS: Media Session API (Controles na tela de bloqueio do celular)
+  // Media Session API (Controles e Nome na tela de bloqueio)
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: m.nome,
       artist: 'GymLog Pro',
-      album: 'Treino' // Você pode até colocar o nome do grupo muscular aqui se quiser depois!
+      album: 'Treino' // Dica: no futuro você pode colocar o dia da semana aqui!
     });
     
-    // Conecta os botões da tela de bloqueio às suas funções
+    // Nota: Passamos "false" nas setas para o sistema não achar que foi automático
     navigator.mediaSession.setActionHandler('play', musPlayPause);
     navigator.mediaSession.setActionHandler('pause', musPlayPause);
     navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
-    navigator.mediaSession.setActionHandler('nexttrack', musProxima);
+    navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
   }
 
   if(S.tab === 'musica') render();
 }
+
 function musPlayPause(){
   if(!S.musicaAudio) return;
-  if(S.musicaPlaying){S.musicaAudio.pause();S.musicaPlaying=false;}
-  else{S.musicaAudio.play().catch(()=>{});S.musicaPlaying=true;}
-  if(S.tab==='musica') render();
+  
+  if(S.musicaPlaying){
+    S.musicaAudio.pause();
+    S.musicaPlaying = false;
+    // Avisa o Android que pausou
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+  } else {
+    S.musicaAudio.play().catch(()=>{});
+    S.musicaPlaying = true;
+    // Avisa o Android que voltou a tocar
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  }
+  if(S.tab === 'musica') render();
 }
+
 function musStop(){
   if(S.musicaAudio){
     S.musicaAudio.pause();
-    S.musicaAudio.src = ''; // Limpa a fonte do áudio
+    S.musicaAudio.src = ''; // Esvazia o arquivo
   }
   S.musicaAtual = null; 
   S.musicaPlaying = false;
   
-  // Remove os controles da tela de bloqueio
+  // Limpa a tela de bloqueio do celular
   if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
   }
   
   if(S.tab === 'musica') render();
 }
+
 function musMudarModo(){
   const ordem = ['todas', 'uma', 'aleatorio'];
   S.musicaModo = ordem[(ordem.indexOf(S.musicaModo || 'todas') + 1) % 3];
