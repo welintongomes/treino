@@ -947,41 +947,20 @@ function musPlay(id, force = false){
   
   S.musicaAtual = m;
 
-  // 1. SE O PLAYER NÃO EXISTE, criamos e "abençoamos" ele uma única vez
+  // 1. Cria o player apenas uma vez, sem nunca destruí-lo
   if (!S.musicaAudio) {
-    S.musicaAudio = document.createElement('audio');
-    S.musicaAudio.style.display = 'none';
-    document.body.appendChild(S.musicaAudio); 
+    S.musicaAudio = new Audio();
     
-    // Adiciona os ouvintes apenas uma vez
+    // Adiciona os ouvintes uma única vez
     S.musicaAudio.addEventListener('ended', () => musProxima(true));
     S.musicaAudio.addEventListener('timeupdate', updMusicProg);
     S.musicaAudio.addEventListener('error', () => {
       setTimeout(() => musProxima(true), 1000);
     });
-  } else {
-    // 2. SE JÁ EXISTE, fazemos uma limpeza profunda sem destruir o elemento
-    S.musicaAudio.pause();
-    S.musicaAudio.removeAttribute('src'); // Arranca a música antiga
-    S.musicaAudio.load(); // Força o navegador a cuspir a memória travada
   }
 
-  // 3. Coloca a música nova no MESMO player que o Android já confia
-  S.musicaAudio.src = m.arquivo;
-  S.musicaAudio.volume = S.musicaVolume;
-  
-  // Toca a música e informa o status ao sistema
-  const playPromise = S.musicaAudio.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      S.musicaPlaying = true;
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    }).catch(()=>{ S.musicaPlaying = false; });
-  } else {
-    S.musicaPlaying = true;
-  }
-  
-  // Recria a notificação da tela de bloqueio com os dados da nova música
+  // 2. ATUALIZA A TELA DE BLOQUEIO *ANTES* DE DAR O PLAY
+  // Isso avisa o Android: "Ei, a música só mudou de nome, não parou!"
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: m.nome,
@@ -993,6 +972,21 @@ function musPlay(id, force = false){
     navigator.mediaSession.setActionHandler('pause', musPlayPause);
     navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
     navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
+  }
+
+  // 3. APENAS SUBSTITUI O ARQUIVO (Sem .load() e sem apagar o antigo!)
+  S.musicaAudio.src = m.arquivo;
+  S.musicaAudio.volume = S.musicaVolume;
+  
+  // 4. Dá o play direto!
+  const playPromise = S.musicaAudio.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      S.musicaPlaying = true;
+      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    }).catch(()=>{ S.musicaPlaying = false; });
+  } else {
+    S.musicaPlaying = true;
   }
 
   if(S.tab === 'musica') render();
@@ -1016,16 +1010,13 @@ function musPlayPause(){
 }
 
 function musStop(){
-  // Limpa tudo, mas NÃO remove o S.musicaAudio do HTML
   if(S.musicaAudio){
     S.musicaAudio.pause();
-    S.musicaAudio.removeAttribute('src');
-    S.musicaAudio.load();
+    // Apenas paramos, sem usar o load() para não bugar o sistema
   }
   S.musicaAtual = null; 
   S.musicaPlaying = false;
   
-  // Apaga a tela de bloqueio
   if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = 'none';
