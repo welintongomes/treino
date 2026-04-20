@@ -418,24 +418,6 @@ function diaHoje(){return['dom','seg','ter','qua','qui','sex','sab'][new Date().
 function fmtTimer(s){const m=Math.floor(s/60),ss=s%60;return`${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}
 function fmtData(ts){return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
 
-// Converte o texto gigante do Banco de Dados em um Arquivo Virtual leve (Blob)
-function gerarBlob(base64) {
-  try {
-    const parts = base64.split(',');
-    const mime = parts[0].match(/:(.*?);/)[1];
-    const bstr = atob(parts[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while(n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    const blob = new Blob([u8arr], {type: mime});
-    return URL.createObjectURL(blob); // Cria um link local super rápido
-  } catch (e) {
-    return base64; // Se der qualquer erro, tenta usar o original
-  }
-}
-
 let S = {
   tab:'hoje', diaAtivo: diaHoje(),
   timerSeg:60, timerRest:60, timerOn:false, timerInterval:null, timerEnd:null,
@@ -965,50 +947,35 @@ function musPlay(id, force = false){
   
   S.musicaAtual = m;
 
-  // 1. Cria o player apenas uma vez
+  // 1. A MÁGICA: Em vez de destruir e recriar, nós reaproveitamos o player!
   if (!S.musicaAudio) {
     S.musicaAudio = new Audio();
-    
+    // Só adicionamos os ouvintes de evento UMA vez na vida
     S.musicaAudio.addEventListener('ended', () => musProxima(true));
     S.musicaAudio.addEventListener('timeupdate', updMusicProg);
-    S.musicaAudio.addEventListener('error', () => {
-      setTimeout(() => musProxima(true), 1000);
-    });
   }
 
-  // 2. Atualiza a tela de bloqueio
+  // Apenas trocamos o arquivo (src) e o volume do player já existente
+  S.musicaAudio.src = m.arquivo;
+  S.musicaAudio.volume = S.musicaVolume;
+  
+  // Toca a música
+  S.musicaAudio.play().catch(()=>{});
+  S.musicaPlaying = true;
+  
+  // 2. BÔNUS: Media Session API (Controles na tela de bloqueio do celular)
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: m.nome,
       artist: 'GymLog Pro',
-      album: 'Treino'
+      album: 'Treino' // Você pode até colocar o nome do grupo muscular aqui se quiser depois!
     });
     
+    // Conecta os botões da tela de bloqueio às suas funções
     navigator.mediaSession.setActionHandler('play', musPlayPause);
     navigator.mediaSession.setActionHandler('pause', musPlayPause);
     navigator.mediaSession.setActionHandler('previoustrack', musAnterior);
-    navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
-  }
-
-  // 3. A MÁGICA: Transforma o texto num arquivo virtual rápido
-  if (S.musicaBlobUrl) {
-    URL.revokeObjectURL(S.musicaBlobUrl); // Limpa o arquivo da música anterior da memória RAM
-  }
-  S.musicaBlobUrl = gerarBlob(m.arquivo); // Cria o novo arquivo virtual
-
-  // O Android vai ler isso instantaneamente sem engasgar!
-  S.musicaAudio.src = S.musicaBlobUrl;
-  S.musicaAudio.volume = S.musicaVolume;
-  
-  // 4. Dá o play direto
-  const playPromise = S.musicaAudio.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      S.musicaPlaying = true;
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    }).catch(()=>{ S.musicaPlaying = false; });
-  } else {
-    S.musicaPlaying = true;
+    navigator.mediaSession.setActionHandler('nexttrack', musProxima);
   }
 
   if(S.tab === 'musica') render();
@@ -1034,19 +1001,14 @@ function musPlayPause(){
 function musStop(){
   if(S.musicaAudio){
     S.musicaAudio.pause();
+    S.musicaAudio.src = ''; // Limpa a fonte do áudio
   }
   S.musicaAtual = null; 
   S.musicaPlaying = false;
   
-  // Limpa também o arquivo virtual se a pessoa der stop
-  if (S.musicaBlobUrl) {
-    URL.revokeObjectURL(S.musicaBlobUrl);
-    S.musicaBlobUrl = null;
-  }
-  
+  // Remove os controles da tela de bloqueio
   if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
-      navigator.mediaSession.playbackState = 'none';
   }
   
   if(S.tab === 'musica') render();
