@@ -418,6 +418,24 @@ function diaHoje(){return['dom','seg','ter','qua','qui','sex','sab'][new Date().
 function fmtTimer(s){const m=Math.floor(s/60),ss=s%60;return`${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}
 function fmtData(ts){return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
 
+// Converte o texto gigante do Banco de Dados em um Arquivo Virtual leve (Blob)
+function gerarBlob(base64) {
+  try {
+    const parts = base64.split(',');
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], {type: mime});
+    return URL.createObjectURL(blob); // Cria um link local super rápido
+  } catch (e) {
+    return base64; // Se der qualquer erro, tenta usar o original
+  }
+}
+
 let S = {
   tab:'hoje', diaAtivo: diaHoje(),
   timerSeg:60, timerRest:60, timerOn:false, timerInterval:null, timerEnd:null,
@@ -947,11 +965,10 @@ function musPlay(id, force = false){
   
   S.musicaAtual = m;
 
-  // 1. Cria o player apenas uma vez, sem nunca destruí-lo
+  // 1. Cria o player apenas uma vez
   if (!S.musicaAudio) {
     S.musicaAudio = new Audio();
     
-    // Adiciona os ouvintes uma única vez
     S.musicaAudio.addEventListener('ended', () => musProxima(true));
     S.musicaAudio.addEventListener('timeupdate', updMusicProg);
     S.musicaAudio.addEventListener('error', () => {
@@ -959,8 +976,7 @@ function musPlay(id, force = false){
     });
   }
 
-  // 2. ATUALIZA A TELA DE BLOQUEIO *ANTES* DE DAR O PLAY
-  // Isso avisa o Android: "Ei, a música só mudou de nome, não parou!"
+  // 2. Atualiza a tela de bloqueio
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: m.nome,
@@ -974,11 +990,17 @@ function musPlay(id, force = false){
     navigator.mediaSession.setActionHandler('nexttrack', () => musProxima(false));
   }
 
-  // 3. APENAS SUBSTITUI O ARQUIVO (Sem .load() e sem apagar o antigo!)
-  S.musicaAudio.src = m.arquivo;
+  // 3. A MÁGICA: Transforma o texto num arquivo virtual rápido
+  if (S.musicaBlobUrl) {
+    URL.revokeObjectURL(S.musicaBlobUrl); // Limpa o arquivo da música anterior da memória RAM
+  }
+  S.musicaBlobUrl = gerarBlob(m.arquivo); // Cria o novo arquivo virtual
+
+  // O Android vai ler isso instantaneamente sem engasgar!
+  S.musicaAudio.src = S.musicaBlobUrl;
   S.musicaAudio.volume = S.musicaVolume;
   
-  // 4. Dá o play direto!
+  // 4. Dá o play direto
   const playPromise = S.musicaAudio.play();
   if (playPromise !== undefined) {
     playPromise.then(() => {
@@ -1012,10 +1034,15 @@ function musPlayPause(){
 function musStop(){
   if(S.musicaAudio){
     S.musicaAudio.pause();
-    // Apenas paramos, sem usar o load() para não bugar o sistema
   }
   S.musicaAtual = null; 
   S.musicaPlaying = false;
+  
+  // Limpa também o arquivo virtual se a pessoa der stop
+  if (S.musicaBlobUrl) {
+    URL.revokeObjectURL(S.musicaBlobUrl);
+    S.musicaBlobUrl = null;
+  }
   
   if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = null;
