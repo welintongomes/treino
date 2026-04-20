@@ -484,7 +484,14 @@ function updTimerUI(){
   if(btn) btn.textContent=S.timerOn?'⏸':'▶';
   if(lbl) lbl.textContent=S.timerOn?'DESCANSANDO':(S.timerRest<S.timerSeg&&S.timerRest>0?'PAUSADO':'PRONTO');
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.timerOn)tickTimer();});
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') {
+     // Volta a rodar o timer se precisar
+     if(S.timerOn) tickTimer();
+     // Atualiza a interface da música no segundo em que você liga a tela!
+     if(S.tab === 'musica') render(); 
+  }
+});
 function showAlarm(){
   alarme();
   document.querySelectorAll('.alarm').forEach(e=>e.remove());
@@ -1038,7 +1045,8 @@ function musPlaySincrono(id, force = false){
   const idProxima = definirProximaNaFila();
   if (idProxima) prepararBlob(idProxima);
 
-  if(S.tab === 'musica') render();
+  // Só recria a tela se o usuário estiver ativamente olhando para ela
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
 function musPlayPause(){
@@ -1052,7 +1060,8 @@ function musPlayPause(){
     S.musicaPlaying = true;
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   }
-  if(S.tab === 'musica') render();
+  // Só recria a tela se o usuário estiver ativamente olhando para ela
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
 function musStop(){
@@ -1068,7 +1077,8 @@ function musStop(){
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = 'none';
   }
-  if(S.tab === 'musica') render();
+  // Só recria a tela se o usuário estiver ativamente olhando para ela
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
 function musMudarModo(){
@@ -1081,7 +1091,8 @@ function musMudarModo(){
       const idProxima = definirProximaNaFila();
       if (idProxima) prepararBlob(idProxima);
   }
-  if(S.tab === 'musica') render();
+  // Só recria a tela se o usuário estiver ativamente olhando para ela
+  if(S.tab === 'musica' && document.visibilityState === 'visible') render();
 }
 
 function musProxima(auto = false){
@@ -1142,6 +1153,9 @@ function musVol(v){
 }
 function musScrub(v){if(S.musicaAudio&&S.musicaAudio.duration) S.musicaAudio.currentTime=v/100*S.musicaAudio.duration;}
 function updMusicProg(){
+  // A MÁGICA: Só gasta bateria desenhando a barra se o usuário estiver com a tela ligada!
+  if(document.visibilityState !== 'visible') return; 
+  
   const el=document.getElementById('musProgBar');
   if(el&&S.musicaAudio&&S.musicaAudio.duration) el.value=S.musicaAudio.currentTime/S.musicaAudio.duration*100;
 }
